@@ -112,6 +112,60 @@ type OmegaCompanyDetail = {
   warningFlags: string[];
 };
 
+type OlympDashboardCompany = {
+  dataReadServerId: string;
+  serverDisplayName: string;
+  databaseName: string;
+  companyName: string;
+  accountingYear: number | null;
+  snapshotAt: string;
+  healthScore: number;
+  activityScore: number;
+  payrollCurrentnessScore: number;
+  payrollConsistencyScore: number;
+  periodRegularityScore: number;
+  lastActivityDate: string | null;
+  lastProcessedPeriod: string | null;
+  currentMonthProcessed: boolean;
+  processedPeriodsInYear: number;
+  activity7Days: number;
+  activity30Days: number;
+  trendPercent: number | null;
+  warningFlags: string[];
+};
+
+type OlympMonthlyPeriod = {
+  periodId: string;
+  hasMzda: boolean;
+  hasBase: boolean;
+  hasOdvod: boolean;
+};
+
+type OlympCompanyDetail = {
+  dataReadServerId: string;
+  serverDisplayName: string;
+  databaseName: string;
+  companyName: string;
+  accountingYear: number | null;
+  snapshotAt: string;
+  healthScore: number;
+  activityScore: number;
+  payrollCurrentnessScore: number;
+  payrollConsistencyScore: number;
+  periodRegularityScore: number;
+  lastActivityDate: string | null;
+  lastProcessedPeriod: string | null;
+  currentMonthProcessed: boolean;
+  processedPeriodsInYear: number;
+  activity7Days: number;
+  activity30Days: number;
+  nullStartTimeCount: number;
+  missingPeriodsCount: number;
+  inconsistentPeriodsCount: number;
+  periods: OlympMonthlyPeriod[];
+  warningFlags: string[];
+};
+
 type RefreshSettings = {
   productType: string | number;
   refreshTime: string;
@@ -126,12 +180,13 @@ function App() {
   const [section, setSection] = useState<Section>('stats-omega');
   const [settingsOpen, setSettingsOpen] = useState(true);
   const [omegaDetail, setOmegaDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
+  const [olympDetail, setOlympDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
 
   return (
     <main className="app-shell">
       <aside className="sidebar">
         <div className="brand">Kros Extension</div>
-        <button className={section === 'stats-olymp' ? 'active' : ''} onClick={() => setSection('stats-olymp')}>
+        <button className={section === 'stats-olymp' ? 'active' : ''} onClick={() => { setSection('stats-olymp'); setOlympDetail(null); }}>
           <BarChart3 size={18} /> Olymp
         </button>
         <button className={section === 'stats-omega' ? 'active' : ''} onClick={() => { setSection('stats-omega'); setOmegaDetail(null); }}>
@@ -158,7 +213,16 @@ function App() {
         {section === 'settings-servers' && <ServersPage />}
         {section === 'settings-olymp' && <CompaniesPage product="olymp" />}
         {section === 'settings-omega' && <CompaniesPage product="omega" />}
-        {section === 'stats-olymp' && <StatisticsPage product="olymp" />}
+        {section === 'stats-olymp' && (olympDetail
+          ? <OlympCompanyDetailPage
+              dataReadServerId={olympDetail.dataReadServerId}
+              databaseName={olympDetail.databaseName}
+              onBack={() => setOlympDetail(null)}
+            />
+          : <OlympDashboardPage
+              onOpenDetail={(serverId, db) => setOlympDetail({ dataReadServerId: serverId, databaseName: db })}
+            />
+        )}
         {section === 'stats-omega' && (omegaDetail
           ? <OmegaCompanyDetailPage
               dataReadServerId={omegaDetail.dataReadServerId}
@@ -752,6 +816,316 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
   );
 }
 
+function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId: string, databaseName: string) => void }) {
+  const [companies, setCompanies] = useState<OlympDashboardCompany[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/olymp/dashboard/companies');
+
+      if (!response.ok) {
+        setError(await response.text());
+        setCompanies([]);
+        return;
+      }
+
+      setCompanies(await response.json());
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : 'Načítanie Olymp dashboardu zlyhalo.');
+      setCompanies([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function updateData() {
+    setIsUpdating(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/olymp/companies/update-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ databaseName: null })
+      });
+
+      if (!response.ok) {
+        setError(await response.text());
+        return;
+      }
+
+      await load();
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : 'UpdateData zlyhalo.');
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  return (
+    <div className="page">
+      <header>
+        <h1>Olymp dashboard</h1>
+        <div className="actions">
+          <button onClick={load} disabled={isLoading || isUpdating}>
+            <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
+          </button>
+          <button onClick={updateData} disabled={isLoading || isUpdating}>
+            <RefreshCw size={16} /> {isUpdating ? 'Aktualizujem...' : 'UpdateData'}
+          </button>
+        </div>
+      </header>
+
+      {error && <div className="status error">{error}</div>}
+
+      {companies.length > 0 && (
+        <div className="snapshot-age">
+          Snapshot: {formatSnapshotAge(companies[0].snapshotAt)} starý
+        </div>
+      )}
+
+      <table className="risk-table">
+        <thead>
+          <tr>
+            <th>Firma</th>
+            <th>Health</th>
+            <th>Posledná aktivita</th>
+            <th>Posledné obdobie</th>
+            <th>Akt. mesiac</th>
+            <th>Období v roku</th>
+            <th>Trend</th>
+            <th>Warning flags</th>
+          </tr>
+        </thead>
+        <tbody>
+          {!isLoading && companies.length === 0 && (
+            <tr>
+              <td colSpan={8}>Olymp dashboard zatiaľ nemá snapshoty. Spusti UpdateData.</td>
+            </tr>
+          )}
+          {companies.map((company) => (
+            <tr key={`${company.dataReadServerId}-${company.databaseName}`}>
+              <td>
+                <button
+                  className="company-link"
+                  onClick={() => onOpenDetail(company.dataReadServerId, company.databaseName)}
+                >
+                  <strong>{company.companyName}</strong>
+                  <span className="muted-line">{company.databaseName}</span>
+                </button>
+              </td>
+              <td>
+                <span className={`score-pill ${scoreClass(company.healthScore)}`}>{company.healthScore}</span>
+              </td>
+              <td>{formatDate(company.lastActivityDate)}</td>
+              <td>{company.lastProcessedPeriod ?? '–'}</td>
+              <td>
+                <span className={company.currentMonthProcessed ? 'score-pill good' : 'score-pill critical'}>
+                  {company.currentMonthProcessed ? '✓' : '✗'}
+                </span>
+              </td>
+              <td>{company.processedPeriodsInYear}</td>
+              <td>{formatTrend(company.trendPercent)}</td>
+              <td>
+                <div className="warning-list">
+                  {company.warningFlags.length === 0 && <span className="warning-pill ok">OK</span>}
+                  {company.warningFlags.map((warning) => (
+                    <span key={warning} className={`warning-pill ${olympWarningSeverity(warning)}`}>
+                      {olympWarningLabel(warning)}
+                    </span>
+                  ))}
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function OlympCompanyDetailPage({
+  dataReadServerId,
+  databaseName,
+  onBack
+}: {
+  dataReadServerId: string;
+  databaseName: string;
+  onBack: () => void;
+}) {
+  const [detail, setDetail] = useState<OlympCompanyDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/olymp/dashboard/companies/${dataReadServerId}/${encodeURIComponent(databaseName)}`
+      );
+
+      if (!response.ok) {
+        setError(await response.text());
+        return;
+      }
+
+      setDetail(await response.json());
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : 'Načítanie detailu zlyhalo.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, [dataReadServerId, databaseName]);
+
+  return (
+    <div className="page">
+      <header>
+        <div className="back-header">
+          <button className="back-btn" onClick={onBack}>← Späť</button>
+          {detail && (
+            <h1>
+              {detail.companyName}
+              <span className="muted-label"> ({detail.databaseName})</span>
+            </h1>
+          )}
+        </div>
+        <button onClick={load} disabled={isLoading}>
+          <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
+        </button>
+      </header>
+
+      {error && <div className="status error">{error}</div>}
+      {isLoading && <div className="status">Načítavam detail...</div>}
+
+      {detail && (
+        <div className="detail-layout">
+
+          <section className="detail-card">
+            <h2>Health score</h2>
+            <div className="health-score-hero">
+              <span className={`score-pill large ${scoreClass(detail.healthScore)}`}>
+                {detail.healthScore}
+              </span>
+            </div>
+            <div className="score-breakdown">
+              {([
+                { label: 'Aktivita', value: detail.activityScore, weight: '25 %' },
+                { label: 'Aktuálnosť miezd', value: detail.payrollCurrentnessScore, weight: '35 %' },
+                { label: 'Konzistencia', value: detail.payrollConsistencyScore, weight: '25 %' },
+                { label: 'Pravidelnosť', value: detail.periodRegularityScore, weight: '15 %' }
+              ] as const).map(({ label, value, weight }) => (
+                <div key={label} className="score-row">
+                  <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
+                  <div className="score-bar-track">
+                    <div className={`score-bar-fill ${scoreClass(value)}`} style={{ width: `${value}%` }} />
+                  </div>
+                  <span className="score-value">{value}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="detail-card">
+            <h2>Payroll status</h2>
+            <div className="type-breakdown">
+              {([
+                { label: 'Posledná aktivita', value: formatDate(detail.lastActivityDate) },
+                { label: 'Posledné obdobie', value: detail.lastProcessedPeriod ?? '–' },
+                { label: 'Akt. mesiac spracovaný', value: detail.currentMonthProcessed ? 'Áno' : 'Nie' },
+                { label: 'Období v roku', value: String(detail.processedPeriodsInYear) },
+                { label: 'Chýbajúce obdobia', value: String(detail.missingPeriodsCount) },
+                { label: 'Nekonzistentné obdobia', value: String(detail.inconsistentPeriodsCount) },
+                { label: 'Null timestamps', value: String(detail.nullStartTimeCount) }
+              ] as const).map(({ label, value }) => (
+                <div key={label} className="type-row">
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {detail.warningFlags.length > 0 && (
+            <section className="detail-card">
+              <h2>Varovania</h2>
+              <div className="warning-list large">
+                {detail.warningFlags.map((flag) => (
+                  <span key={flag} className={`warning-pill ${olympWarningSeverity(flag)}`}>
+                    {olympWarningLabel(flag)}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="detail-card">
+            <h2>Aktivita</h2>
+            <div className="type-breakdown">
+              {([
+                { label: 'Posledných 7 dní', value: String(detail.activity7Days) },
+                { label: 'Posledných 30 dní', value: String(detail.activity30Days) }
+              ] as const).map(({ label, value }) => (
+                <div key={label} className="type-row">
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="detail-card full-width">
+            <h2>Mzdové obdobia</h2>
+            <div className="heatmap">
+              {detail.periods.map((p) => {
+                const allOk = p.hasMzda && p.hasBase && p.hasOdvod;
+                const noneOk = !p.hasMzda && !p.hasBase && !p.hasOdvod;
+                const cls = noneOk ? 'heatmap-empty'
+                  : allOk ? 'heatmap-great'
+                  : 'heatmap-bad';
+                return (
+                  <div
+                    key={p.periodId}
+                    className={`heatmap-cell ${cls}`}
+                    title={`${p.periodId}: mzda=${p.hasMzda ? '✓' : '✗'} base=${p.hasBase ? '✓' : '✗'} odvod=${p.hasOdvod ? '✓' : '✗'}`}
+                  >
+                    <span className="heatmap-month">{p.periodId}</span>
+                    <span className="heatmap-rate">{allOk ? '✓' : noneOk ? '–' : '!'}</span>
+                    <span className="heatmap-docs">
+                      {[p.hasMzda ? 'M' : '·', p.hasBase ? 'B' : '·', p.hasOdvod ? 'O' : '·'].join(' ')}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="heatmap-legend">
+              <span className="heatmap-great">Kompletné</span>
+              <span className="heatmap-bad">Neúplné</span>
+              <span className="heatmap-empty">Bez dát</span>
+            </div>
+          </section>
+
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OmegaCompanyDetailPage({
   dataReadServerId,
   databaseName,
@@ -995,6 +1369,33 @@ function warningLabel(warning: string) {
     ORPHAN_LINES: 'orphan lines',
     ORPHAN_PAYMENTS: 'orphan payments',
     UNKNOWN_CIRCUIT: 'unknown circuit'
+  };
+
+  return labels[warning] ?? warning;
+}
+
+function olympWarningSeverity(warning: string) {
+  if (['CURRENT_MONTH_MISSING', 'PAYROLL_MONTHS_BEHIND', 'INACTIVE_30D'].includes(warning)) {
+    return 'critical';
+  }
+
+  if (['INACTIVE_14D', 'MISSING_PERIODS', 'PAYROLL_INCONSISTENCY', 'NULL_STARTTIME'].includes(warning)) {
+    return 'bad';
+  }
+
+  return 'watch';
+}
+
+function olympWarningLabel(warning: string) {
+  const labels: Record<string, string> = {
+    CURRENT_MONTH_MISSING: 'mesiac chýba',
+    PAYROLL_MONTHS_BEHIND: 'oneskorené mzdy',
+    INACTIVE_30D: '30d neaktivita',
+    INACTIVE_14D: '14d neaktivita',
+    MISSING_PERIODS: 'chýbajúce obdobia',
+    PAYROLL_INCONSISTENCY: 'nekonzistencia',
+    NULL_STARTTIME: 'null timestamp',
+    LOW_ACTIVITY: 'nízka aktivita'
   };
 
   return labels[warning] ?? warning;
