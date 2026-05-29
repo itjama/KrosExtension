@@ -928,7 +928,7 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
                 <span className={`score-pill ${scoreClass(company.healthScore)}`}>{company.healthScore}</span>
               </td>
               <td>{formatDate(company.lastActivityDate)}</td>
-              <td>{company.lastProcessedPeriod ?? '–'}</td>
+              <td>{formatPeriodId(company.lastProcessedPeriod)}</td>
               <td>
                 <span className={company.currentMonthProcessed ? 'score-pill good' : 'score-pill critical'}>
                   {company.currentMonthProcessed ? '✓' : '✗'}
@@ -1046,7 +1046,7 @@ function OlympCompanyDetailPage({
             <div className="type-breakdown">
               {([
                 { label: 'Posledná aktivita', value: formatDate(detail.lastActivityDate) },
-                { label: 'Posledné obdobie', value: detail.lastProcessedPeriod ?? '–' },
+                { label: 'Posledné obdobie', value: formatPeriodId(detail.lastProcessedPeriod) },
                 { label: 'Akt. mesiac spracovaný', value: detail.currentMonthProcessed ? 'Áno' : 'Nie' },
                 { label: 'Období v roku', value: String(detail.processedPeriodsInYear) },
                 { label: 'Chýbajúce obdobia', value: String(detail.missingPeriodsCount) },
@@ -1102,9 +1102,9 @@ function OlympCompanyDetailPage({
                   <div
                     key={p.periodId}
                     className={`heatmap-cell ${cls}`}
-                    title={`${p.periodId}: mzda=${p.hasMzda ? '✓' : '✗'} base=${p.hasBase ? '✓' : '✗'} odvod=${p.hasOdvod ? '✓' : '✗'}`}
+                    title={`${formatPeriodId(p.periodId)}: mzda=${p.hasMzda ? '✓' : '✗'} base=${p.hasBase ? '✓' : '✗'} odvod=${p.hasOdvod ? '✓' : '✗'}`}
                   >
-                    <span className="heatmap-month">{p.periodId}</span>
+                    <span className="heatmap-month">{formatPeriodId(p.periodId)}</span>
                     <span className="heatmap-rate">{allOk ? '✓' : noneOk ? '–' : '!'}</span>
                     <span className="heatmap-docs">
                       {[p.hasMzda ? 'M' : '·', p.hasBase ? 'B' : '·', p.hasOdvod ? 'O' : '·'].join(' ')}
@@ -1423,6 +1423,11 @@ function formatSnapshotAge(isoDate: string | null) {
   if (diffHours < 1) return '< 1 hod';
   if (diffHours < 24) return `${diffHours} hod`;
   return `${Math.floor(diffHours / 24)} dní`;
+}
+
+function formatPeriodId(periodId: string | null) {
+  if (!periodId || periodId.length !== 6) return periodId ?? '–';
+  return `${periodId.slice(0, 4)}/${periodId.slice(4)}`;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
