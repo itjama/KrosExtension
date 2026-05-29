@@ -85,6 +85,32 @@ public sealed class CompanyDataRefreshService(ApplicationDbContext dbContext) : 
                 }
             }
 
+            if (productType == ProductType.Olymp)
+            {
+                var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+                var outdated = await dbContext.OlympCompanyDashboardSnapshots
+                    .Where(s => s.DataReadServerId == company.DataReadServerId
+                             && s.DatabaseName == company.DatabaseName
+                             && s.SnapshotAt < cutoff)
+                    .ToListAsync(cancellationToken);
+
+                if (outdated.Count > 0)
+                {
+                    dbContext.OlympCompanyDashboardSnapshots.RemoveRange(outdated);
+                }
+
+                var snapshot = await OlympDashboardSnapshotCalculator.ReadSnapshotAsync(
+                    server,
+                    company,
+                    DateTime.Today,
+                    cancellationToken);
+
+                if (snapshot is not null)
+                {
+                    dbContext.OlympCompanyDashboardSnapshots.Add(snapshot);
+                }
+            }
+
             refreshed++;
         }
 

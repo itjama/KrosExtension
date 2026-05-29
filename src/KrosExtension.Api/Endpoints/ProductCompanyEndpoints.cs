@@ -44,6 +44,28 @@ public static class ProductCompanyEndpoints
             return Results.NoContent();
         }).WithName($"Save{productType}RefreshSettings");
 
+        if (productType == ProductType.Olymp)
+        {
+            productGroup.MapGet("/dashboard/companies", async (
+                IOlympDashboardReader dashboardReader,
+                CancellationToken cancellationToken) =>
+            {
+                var companies = await dashboardReader.GetCompaniesAsync(cancellationToken);
+                return Results.Ok(companies);
+            }).WithName("GetOlympDashboardCompanies");
+
+            productGroup.MapGet("/dashboard/companies/{dataReadServerId:guid}/{databaseName}", async (
+                Guid dataReadServerId,
+                string databaseName,
+                IOlympCompanyDetailReader detailReader,
+                CancellationToken cancellationToken) =>
+            {
+                var detail = await detailReader.GetCompanyDetailAsync(
+                    dataReadServerId, databaseName, cancellationToken);
+                return detail is null ? Results.NotFound() : Results.Ok(detail);
+            }).WithName("GetOlympCompanyDetail");
+        }
+
         if (productType == ProductType.Omega)
         {
             productGroup.MapGet("/dashboard/companies", async (
