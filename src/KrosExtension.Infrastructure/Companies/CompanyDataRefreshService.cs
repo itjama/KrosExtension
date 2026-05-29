@@ -61,6 +61,18 @@ public sealed class CompanyDataRefreshService(ApplicationDbContext dbContext) : 
 
             if (productType == ProductType.Omega)
             {
+                var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+                var outdated = await dbContext.OmegaCompanyDashboardSnapshots
+                    .Where(s => s.DataReadServerId == company.DataReadServerId
+                             && s.DatabaseName == company.DatabaseName
+                             && s.SnapshotAt < cutoff)
+                    .ToListAsync(cancellationToken);
+
+                if (outdated.Count > 0)
+                {
+                    dbContext.OmegaCompanyDashboardSnapshots.RemoveRange(outdated);
+                }
+
                 var snapshot = await OmegaDashboardSnapshotCalculator.ReadSnapshotAsync(
                     server,
                     company,
