@@ -382,7 +382,7 @@ th {
   white-space: nowrap;
 }
 .muted-label {
-  color: #888;
+  color: #94a3b8;
   font-weight: 400;
 }
 .detail-layout {
@@ -396,12 +396,13 @@ th {
   border: 1px solid #2d2d4e;
   border-radius: 8px;
   padding: 1rem;
+  color: #e2e8f0;
 }
 .detail-card h2 {
   font-size: 0.82rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #888;
+  color: #94a3b8;
   margin: 0 0 0.75rem;
 }
 .detail-card.full-width {
@@ -534,7 +535,7 @@ th {
 .aging-label {
   display: block;
   font-size: 0.72rem;
-  color: #aaa;
+  color: #cbd5e1;
   margin-top: 0.3rem;
 }
 
@@ -552,9 +553,9 @@ th {
   border: 1px solid transparent;
   cursor: default;
 }
-.heatmap-month { display: block; font-size: 0.72rem; color: #aaa; }
-.heatmap-rate  { display: block; font-size: 1.05rem; font-weight: 700; margin: 0.1rem 0; }
-.heatmap-docs  { display: block; font-size: 0.68rem; color: #888; }
+.heatmap-month { display: block; font-size: 0.72rem; color: #94a3b8; }
+.heatmap-rate  { display: block; font-size: 1.05rem; font-weight: 700; margin: 0.1rem 0; color: #f1f5f9; }
+.heatmap-docs  { display: block; font-size: 0.68rem; color: #94a3b8; }
 .heatmap-great { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
 .heatmap-ok    { background: rgba(245, 158, 11, 0.12); border-color: #f59e0b; }
 .heatmap-warn  { background: rgba(249, 115, 22, 0.12); border-color: #f97316; }
