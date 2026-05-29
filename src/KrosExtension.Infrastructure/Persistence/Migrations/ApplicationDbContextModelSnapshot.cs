@@ -204,9 +204,6 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("nvarchar(128)");
 
-                    b.Property<long>("DuplicateDocumentLinks")
-                        .HasColumnType("bigint");
-
                     b.Property<int>("HealthScore")
                         .HasColumnType("int");
 
@@ -239,6 +236,9 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                         .HasPrecision(5, 2)
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<long>("PreAccountedStuck")
+                        .HasColumnType("bigint");
+
                     b.Property<long>("Previous7DaysActivity")
                         .HasColumnType("bigint");
 
@@ -256,6 +256,10 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTimeOffset>("SnapshotAt")
                         .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal?>("StornoRate30Days")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
 
                     b.Property<decimal?>("TrendPercent")
                         .HasPrecision(8, 2)

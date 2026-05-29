@@ -38,7 +38,8 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
         long imported30Days,
         long platform30Days,
         long manual30Days,
-        long duplicateDocumentLinks,
+        decimal? stornoRate30Days,
+        long preAccountedStuck,
         long dataQualityIssues,
         string warningFlags)
     {
@@ -71,7 +72,8 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
         Imported30Days = imported30Days;
         Platform30Days = platform30Days;
         Manual30Days = manual30Days;
-        DuplicateDocumentLinks = duplicateDocumentLinks;
+        StornoRate30Days = stornoRate30Days;
+        PreAccountedStuck = preAccountedStuck;
         DataQualityIssues = dataQualityIssues;
         WarningFlags = warningFlags;
     }
@@ -134,7 +136,9 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
 
     public long Manual30Days { get; private set; }
 
-    public long DuplicateDocumentLinks { get; private set; }
+    public decimal? StornoRate30Days { get; private set; }
+
+    public long PreAccountedStuck { get; private set; }
 
     public long DataQualityIssues { get; private set; }
 

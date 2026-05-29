@@ -52,7 +52,9 @@ internal static class OmegaDashboardSnapshotCalculator
             GetInt64(reader, "Imported30Days"),
             GetInt64(reader, "Platform30Days"),
             GetInt64(reader, "Manual30Days"),
-            GetInt64(reader, "DuplicateDocumentLinks"),
+            GetInt64(reader, "StornoCount"),
+            GetInt64(reader, "OriginalCount"),
+            GetInt64(reader, "PreAccountedStuck"),
             GetInt64(reader, "NullDateCount"),
             GetInt64(reader, "OrphanLineCount"),
             GetInt64(reader, "OrphanPaymentCount"),
@@ -93,7 +95,8 @@ internal static class OmegaDashboardSnapshotCalculator
             metrics.Imported30Days,
             metrics.Platform30Days,
             metrics.Manual30Days,
-            metrics.DuplicateDocumentLinks,
+            metrics.StornoRate30Days,
+            metrics.PreAccountedStuck,
             metrics.DataQualityIssues,
             string.Join(',', warnings));
     }
@@ -190,8 +193,11 @@ internal static class OmegaDashboardSnapshotCalculator
         if (metrics.PreviousMonthPostingRate is < 95m || metrics.HistoricalPostingRate is < 98m)
             warnings.Add("BROKEN_MONTH");
 
-        if (metrics.DuplicateDocumentLinks > 0)
-            warnings.Add("DUPLICATES");
+        if (metrics.StornoRate30Days > 10m)
+            warnings.Add("HIGH_STORNO_RATE");
+
+        if (metrics.PreAccountedStuck > 0)
+            warnings.Add("STUCK_PREACCOUNTED");
 
         if (metrics.NullDateCount > 0)
             warnings.Add("NULL_DATE");
@@ -268,7 +274,9 @@ internal static class OmegaDashboardSnapshotCalculator
         long Imported30Days,
         long Platform30Days,
         long Manual30Days,
-        long DuplicateDocumentLinks,
+        long StornoCount,
+        long OriginalCount,
+        long PreAccountedStuck,
         long NullDateCount,
         long OrphanLineCount,
         long OrphanPaymentCount,
@@ -276,6 +284,9 @@ internal static class OmegaDashboardSnapshotCalculator
     {
         public long DataQualityIssues =>
             NullDateCount + OrphanLineCount + OrphanPaymentCount + UnknownCircuitCount;
+
+        public decimal? StornoRate30Days =>
+            OriginalCount == 0 ? null : decimal.Round(StornoCount * 100m / OriginalCount, 2);
     }
 
     private sealed record OmegaDashboardScores(
@@ -344,14 +355,18 @@ internal static class OmegaDashboardSnapshotCalculator
             FROM documents
             WHERE RegisteredDate < @PreviousMonthStart
         ),
-        duplicate_links AS (
-            SELECT COUNT_BIG(*) AS IssueCount
-            FROM dbo.T228_Faktury AS f
-            JOIN dbo.T040_EUD AS e
-                ON e.C023_CisloInterneKodOkruh = f.C022_KodEvidencia
-               AND ISNULL(e.C001_Vymazany, 0) = 0
-               AND e.C030_CisloInterne = f.C030_CisloFaktury
-            WHERE f.C022_KodEvidencia IN ('OF', 'OPF')
+        storno AS (
+            SELECT
+                SUM(CASE WHEN DocumentCode IN ('zDF', 'zOF') THEN 1 ELSE 0 END) AS StornoCount,
+                SUM(CASE WHEN DocumentCode IN ('DF', 'OF', 'DPF', 'OPF') THEN 1 ELSE 0 END) AS OriginalCount
+            FROM documents
+            WHERE RegisteredDate BETWEEN @From30 AND @Today
+        ),
+        preaccounted_stuck AS (
+            SELECT COUNT_BIG(*) AS StuckCount
+            FROM documents
+            WHERE IsPreAccounted = 1
+              AND IsPosted = 0
         ),
         data_quality AS (
             SELECT
@@ -400,7 +415,9 @@ internal static class OmegaDashboardSnapshotCalculator
                daily.Imported30Days,
                daily.Platform30Days,
                daily.Manual30Days,
-               duplicate_links.IssueCount AS DuplicateDocumentLinks,
+               storno.StornoCount,
+               storno.OriginalCount,
+               preaccounted_stuck.StuckCount AS PreAccountedStuck,
                data_quality.NullDateCount,
                data_quality.OrphanLineCount,
                data_quality.OrphanPaymentCount,
@@ -408,7 +425,8 @@ internal static class OmegaDashboardSnapshotCalculator
         FROM daily
         CROSS JOIN previous_month
         CROSS JOIN historical_months
-        CROSS JOIN duplicate_links
+        CROSS JOIN storno
+        CROSS JOIN preaccounted_stuck
         CROSS JOIN data_quality
         """;
 }

@@ -58,7 +58,8 @@ public sealed class OmegaDashboardReader(ApplicationDbContext dbContext) : IOmeg
             snapshot.Imported30Days,
             snapshot.Platform30Days,
             snapshot.Manual30Days,
-            snapshot.DuplicateDocumentLinks,
+            snapshot.StornoRate30Days,
+            snapshot.PreAccountedStuck,
             snapshot.DataQualityIssues,
             SplitWarnings(snapshot.WarningFlags))).ToList();
     }

@@ -37,6 +37,9 @@ public sealed class OmegaCompanyDashboardSnapshotConfiguration
         builder.Property(snapshot => snapshot.HistoricalPostingRate)
             .HasPrecision(5, 2);
 
+        builder.Property(snapshot => snapshot.StornoRate30Days)
+            .HasPrecision(5, 2);
+
         builder.Property(snapshot => snapshot.WarningFlags)
             .HasMaxLength(1024)
             .IsRequired();

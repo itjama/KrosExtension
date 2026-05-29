@@ -30,6 +30,7 @@ public sealed record OmegaDashboardCompany(
     long Imported30Days,
     long Platform30Days,
     long Manual30Days,
-    long DuplicateDocumentLinks,
+    decimal? StornoRate30Days,
+    long PreAccountedStuck,
     long DataQualityIssues,
     IReadOnlyList<string> WarningFlags);

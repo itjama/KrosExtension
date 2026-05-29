@@ -70,7 +70,8 @@ type OmegaDashboardCompany = {
   imported30Days: number;
   platform30Days: number;
   manual30Days: number;
-  duplicateDocumentLinks: number;
+  stornoRate30Days: number | null;
+  preAccountedStuck: number;
   dataQualityIssues: number;
   warningFlags: string[];
 };
@@ -972,8 +973,8 @@ function warningSeverity(warning: string) {
     return 'critical';
   }
 
-  if (['OLD_UNPOSTED_7D', 'ACTIVITY_DROP', 'IMPORT_ONLY', 'DUPLICATES',
-       'ORPHAN_LINES', 'ORPHAN_PAYMENTS', 'NULL_DATE'].includes(warning)) {
+  if (['OLD_UNPOSTED_7D', 'ACTIVITY_DROP', 'IMPORT_ONLY', 'HIGH_STORNO_RATE',
+       'STUCK_PREACCOUNTED', 'ORPHAN_LINES', 'ORPHAN_PAYMENTS', 'NULL_DATE'].includes(warning)) {
     return 'bad';
   }
 
@@ -988,7 +989,8 @@ function warningLabel(warning: string) {
     ACTIVITY_DROP: 'drop',
     IMPORT_ONLY: 'import only',
     BROKEN_MONTH: 'broken month',
-    DUPLICATES: 'duplicates',
+    HIGH_STORNO_RATE: 'storno',
+    STUCK_PREACCOUNTED: 'stuck',
     NULL_DATE: 'null date',
     ORPHAN_LINES: 'orphan lines',
     ORPHAN_PAYMENTS: 'orphan payments',
