@@ -347,14 +347,11 @@ internal static class OmegaDashboardSnapshotCalculator
         duplicate_links AS (
             SELECT COUNT_BIG(*) AS IssueCount
             FROM dbo.T228_Faktury AS f
+            JOIN dbo.T040_EUD AS e
+                ON e.C023_CisloInterneKodOkruh = f.C022_KodEvidencia
+               AND ISNULL(e.C001_Vymazany, 0) = 0
+               AND e.C030_CisloInterne = f.C030_CisloFaktury
             WHERE f.C022_KodEvidencia IN ('OF', 'OPF')
-              AND 1 < (
-                  SELECT COUNT(*)
-                  FROM dbo.T040_EUD AS e
-                  WHERE e.C023_CisloInterneKodOkruh = f.C022_KodEvidencia
-                    AND ISNULL(e.C001_Vymazany, 0) = 0
-                    AND e.C030_CisloInterne = f.C030_CisloFaktury
-              )
         ),
         data_quality AS (
             SELECT
