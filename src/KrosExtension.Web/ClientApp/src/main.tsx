@@ -75,6 +75,42 @@ type OmegaDashboardCompany = {
   warningFlags: string[];
 };
 
+type OmegaMonthlyBreakdown = {
+  year: number;
+  month: number;
+  registered: number;
+  posted: number;
+  postingRate: number | null;
+};
+
+type OmegaCompanyDetail = {
+  dataReadServerId: string;
+  serverDisplayName: string;
+  databaseName: string;
+  companyName: string;
+  accountingYear: number | null;
+  snapshotAt: string;
+  healthScore: number;
+  activityScore: number;
+  completionScore: number;
+  backlogAgingScore: number;
+  monthClosingScore: number;
+  dataQualityScore: number;
+  registered30Days: number;
+  preAccounted30Days: number;
+  posted30Days: number;
+  platform30Days: number;
+  imported30Days: number;
+  manual30Days: number;
+  backlogTotal: number;
+  backlog0to3Days: number;
+  backlog4to7Days: number;
+  backlog8to30Days: number;
+  backlog30DaysPlus: number;
+  monthlyBreakdown: OmegaMonthlyBreakdown[];
+  warningFlags: string[];
+};
+
 type RefreshSettings = {
   productType: string | number;
   refreshTime: string;
@@ -88,6 +124,7 @@ const productLabels: Record<Product, string> = {
 function App() {
   const [section, setSection] = useState<Section>('stats-omega');
   const [settingsOpen, setSettingsOpen] = useState(true);
+  const [omegaDetail, setOmegaDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
 
   return (
     <main className="app-shell">
@@ -96,7 +133,7 @@ function App() {
         <button className={section === 'stats-olymp' ? 'active' : ''} onClick={() => setSection('stats-olymp')}>
           <BarChart3 size={18} /> Olymp
         </button>
-        <button className={section === 'stats-omega' ? 'active' : ''} onClick={() => setSection('stats-omega')}>
+        <button className={section === 'stats-omega' ? 'active' : ''} onClick={() => { setSection('stats-omega'); setOmegaDetail(null); }}>
           <BarChart3 size={18} /> Omega
         </button>
         <button className="submenu-toggle" onClick={() => setSettingsOpen((current) => !current)}>
@@ -121,7 +158,16 @@ function App() {
         {section === 'settings-olymp' && <CompaniesPage product="olymp" />}
         {section === 'settings-omega' && <CompaniesPage product="omega" />}
         {section === 'stats-olymp' && <StatisticsPage product="olymp" />}
-        {section === 'stats-omega' && <OmegaDashboardPage />}
+        {section === 'stats-omega' && (omegaDetail
+          ? <OmegaCompanyDetailPage
+              dataReadServerId={omegaDetail.dataReadServerId}
+              databaseName={omegaDetail.databaseName}
+              onBack={() => setOmegaDetail(null)}
+            />
+          : <OmegaDashboardPage
+              onOpenDetail={(serverId, db) => setOmegaDetail({ dataReadServerId: serverId, databaseName: db })}
+            />
+        )}
       </section>
     </main>
   );
@@ -564,7 +610,7 @@ function StatisticsPage({ product }: { product: Product }) {
   );
 }
 
-function OmegaDashboardPage() {
+function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId: string, databaseName: string) => void }) {
   const [companies, setCompanies] = useState<OmegaDashboardCompany[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -636,6 +682,12 @@ function OmegaDashboardPage() {
 
       {error && <div className="status error">{error}</div>}
 
+      {companies.length > 0 && (
+        <div className="snapshot-age">
+          Snapshot: {formatSnapshotAge(companies[0].snapshotAt)} starý
+        </div>
+      )}
+
       <table className="risk-table">
         <thead>
           <tr>
@@ -660,8 +712,13 @@ function OmegaDashboardPage() {
           {companies.map((company) => (
             <tr key={`${company.dataReadServerId}-${company.databaseName}`}>
               <td>
-                <strong>{company.companyName}</strong>
-                <span className="muted-line">{company.databaseName}</span>
+                <button
+                  className="company-link"
+                  onClick={() => onOpenDetail(company.dataReadServerId, company.databaseName)}
+                >
+                  <strong>{company.companyName}</strong>
+                  <span className="muted-line">{company.databaseName}</span>
+                </button>
               </td>
               <td>
                 <span className={`score-pill ${scoreClass(company.healthScore)}`}>{company.healthScore}</span>
@@ -755,6 +812,14 @@ function formatTrend(value: number | null) {
   }
 
   return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
+}
+
+function formatSnapshotAge(isoDate: string | null) {
+  if (!isoDate) return null;
+  const diffHours = Math.floor((Date.now() - new Date(isoDate).getTime()) / 3_600_000);
+  if (diffHours < 1) return '< 1 hod';
+  if (diffHours < 24) return `${diffHours} hod`;
+  return `${Math.floor(diffHours / 24)} dní`;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
