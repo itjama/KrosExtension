@@ -1,0 +1,28 @@
+namespace KrosExtension.Application.Companies;
+
+public sealed record OmegaCompanyDetail(
+    Guid DataReadServerId,
+    string ServerDisplayName,
+    string DatabaseName,
+    string CompanyName,
+    int? AccountingYear,
+    DateTimeOffset SnapshotAt,
+    int HealthScore,
+    int ActivityScore,
+    int CompletionScore,
+    int BacklogAgingScore,
+    int MonthClosingScore,
+    int DataQualityScore,
+    long Registered30Days,
+    long PreAccounted30Days,
+    long Posted30Days,
+    long Platform30Days,
+    long Imported30Days,
+    long Manual30Days,
+    long BacklogTotal,
+    long Backlog0to3Days,
+    long Backlog4to7Days,
+    long Backlog8to30Days,
+    long Backlog30DaysPlus,
+    IReadOnlyList<OmegaMonthlyBreakdown> MonthlyBreakdown,
+    IReadOnlyList<string> WarningFlags);
