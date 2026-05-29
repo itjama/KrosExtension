@@ -152,6 +152,97 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                     b.ToTable("DataReadServers", (string)null);
                 });
 
+            modelBuilder.Entity("KrosExtension.Domain.Configuration.OlympCompanyDashboardSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("AccountingYear")
+                        .HasColumnType("int");
+
+                    b.Property<long>("Activity30Days")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("Activity7Days")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("ActivityScore")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<bool>("CurrentMonthProcessed")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid>("DataReadServerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("DatabaseName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int>("HealthScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("InconsistentPeriodsCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("LastActivityDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastProcessedPeriod")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<int>("MissingPeriodsCount")
+                        .HasColumnType("int");
+
+                    b.Property<long>("NullStartTimeCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("PayrollConsistencyScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PayrollCurrentnessScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PeriodRegularityScore")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ProcessedPeriodsInYear")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ServerDisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<DateTimeOffset>("SnapshotAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal?>("TrendPercent")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
+
+                    b.Property<string>("WarningFlags")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("nvarchar(1024)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HealthScore");
+
+                    b.HasIndex("DataReadServerId", "DatabaseName", "SnapshotAt");
+
+                    b.ToTable("OlympCompanyDashboardSnapshots", (string)null);
+                });
+
             modelBuilder.Entity("KrosExtension.Domain.Configuration.OmegaCompanyDashboardSnapshot", b =>
                 {
                     b.Property<Guid>("Id")
