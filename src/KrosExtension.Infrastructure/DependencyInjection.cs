@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ICompanyStatisticsReader, CompanyStatisticsReader>();
         services.AddScoped<ICompanyDataRefreshService, CompanyDataRefreshService>();
         services.AddScoped<IOmegaDashboardReader, OmegaDashboardReader>();
+        services.AddScoped<IOmegaCompanyDetailReader, OmegaCompanyDetailReader>();
         services.AddScoped<ICompanyReadConnectionFactory, CompanyReadConnectionFactory>();
 
         return services;
