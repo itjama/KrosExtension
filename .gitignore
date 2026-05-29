@@ -1,0 +1,11 @@
+bin/
+obj/
+.vs/
+.vscode/
+
+src/KrosExtension.Web/ClientApp/node_modules/
+src/KrosExtension.Web/ClientApp/dist/
+
+data/localdb/
+*.user
+*.suo

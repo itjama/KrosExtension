@@ -1,0 +1,72 @@
+using KrosExtension.Application.Companies;
+using KrosExtension.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace KrosExtension.Infrastructure.Companies;
+
+public sealed class OmegaDashboardReader(ApplicationDbContext dbContext) : IOmegaDashboardReader
+{
+    public async Task<IReadOnlyList<OmegaDashboardCompany>> GetCompaniesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var snapshots = await dbContext.OmegaCompanyDashboardSnapshots
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+
+        var latestSnapshots = snapshots
+            .GroupBy(snapshot => new
+            {
+                snapshot.DataReadServerId,
+                snapshot.DatabaseName
+            })
+            .Select(group => group
+                .OrderByDescending(snapshot => snapshot.SnapshotAt)
+                .First())
+            .OrderBy(snapshot => snapshot.HealthScore)
+            .ThenByDescending(snapshot => snapshot.Backlog30DaysPlus)
+            .ThenByDescending(snapshot => snapshot.BacklogCount)
+            .ThenBy(snapshot => snapshot.LastActivityDate)
+            .ToList();
+
+        return latestSnapshots.Select(snapshot => new OmegaDashboardCompany(
+            snapshot.DataReadServerId,
+            snapshot.ServerDisplayName,
+            snapshot.DatabaseName,
+            snapshot.CompanyName,
+            snapshot.AccountingYear,
+            snapshot.SnapshotAt,
+            snapshot.HealthScore,
+            snapshot.ActivityScore,
+            snapshot.CompletionScore,
+            snapshot.BacklogAgingScore,
+            snapshot.MonthClosingScore,
+            snapshot.DataQualityScore,
+            snapshot.Activity7Days,
+            snapshot.Activity30Days,
+            snapshot.Previous7DaysActivity,
+            snapshot.TrendPercent,
+            snapshot.Registered30Days,
+            snapshot.Posted30Days,
+            snapshot.PostingRate30Days,
+            snapshot.BacklogCount,
+            snapshot.Backlog7DaysPlus,
+            snapshot.Backlog30DaysPlus,
+            snapshot.OldestOpenAgeDays,
+            snapshot.LastActivityDate,
+            snapshot.PreviousMonthPostingRate,
+            snapshot.HistoricalPostingRate,
+            snapshot.Imported30Days,
+            snapshot.Platform30Days,
+            snapshot.Manual30Days,
+            snapshot.DuplicateDocumentLinks,
+            snapshot.DataQualityIssues,
+            SplitWarnings(snapshot.WarningFlags))).ToList();
+    }
+
+    private static IReadOnlyList<string> SplitWarnings(string warningFlags)
+    {
+        return string.IsNullOrWhiteSpace(warningFlags)
+            ? []
+            : warningFlags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+}
