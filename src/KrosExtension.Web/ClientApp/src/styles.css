@@ -347,3 +347,231 @@ th {
     width: 100%;
   }
 }
+
+/* ---- Company link button in table ---- */
+.company-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: inherit;
+}
+.company-link:hover strong {
+  text-decoration: underline;
+}
+
+/* ---- Snapshot age ---- */
+.snapshot-age {
+  font-size: 0.78rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+/* ---- Detail page layout ---- */
+.back-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.back-btn {
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.muted-label {
+  color: #888;
+  font-weight: 400;
+}
+.detail-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.detail-card {
+  background: #1a1a2e;
+  border: 1px solid #2d2d4e;
+  border-radius: 8px;
+  padding: 1rem;
+}
+.detail-card h2 {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #888;
+  margin: 0 0 0.75rem;
+}
+.detail-card.full-width {
+  grid-column: 1 / -1;
+}
+
+/* ---- Health score breakdown ---- */
+.health-score-hero {
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+.score-pill.large {
+  font-size: 2rem;
+  padding: 0.4rem 1.2rem;
+  border-radius: 10px;
+}
+.score-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.score-row {
+  display: grid;
+  grid-template-columns: 150px 1fr 36px;
+  align-items: center;
+  gap: 0.5rem;
+}
+.score-label {
+  font-size: 0.82rem;
+}
+.score-bar-track {
+  height: 8px;
+  background: #2d2d4e;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.score-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.score-bar-fill.good     { background: #10b981; }
+.score-bar-fill.watch    { background: #f59e0b; }
+.score-bar-fill.bad      { background: #f97316; }
+.score-bar-fill.critical { background: #ef4444; }
+.score-value {
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+/* ---- Warning list in detail card ---- */
+.warning-list.large .warning-pill {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.65rem;
+}
+
+/* ---- Workflow funnel ---- */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.funnel-row {
+  display: grid;
+  grid-template-columns: 130px 1fr 110px;
+  align-items: center;
+  gap: 0.5rem;
+}
+.funnel-label {
+  font-size: 0.85rem;
+}
+.funnel-bar-track {
+  height: 14px;
+  background: #2d2d4e;
+  border-radius: 4px;
+  overflow: hidden;
+}
+.funnel-bar-fill {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.funnel-value {
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+/* ---- Type breakdown ---- */
+.type-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.type-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #2d2d4e;
+}
+.type-row:last-child {
+  border-bottom: none;
+}
+
+/* ---- Backlog aging buckets ---- */
+.aging-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+.aging-bucket {
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  border-radius: 6px;
+  background: #2d2d4e;
+  border: 1px solid transparent;
+}
+.aging-bucket.ok       { border-color: #10b981; }
+.aging-bucket.watch    { border-color: #f59e0b; }
+.aging-bucket.bad      { border-color: #f97316; }
+.aging-bucket.critical { border-color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+.aging-count {
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.aging-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #aaa;
+  margin-top: 0.3rem;
+}
+
+/* ---- Monthly heatmap ---- */
+.heatmap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.heatmap-cell {
+  width: 88px;
+  padding: 0.45rem 0.5rem;
+  border-radius: 6px;
+  text-align: center;
+  border: 1px solid transparent;
+  cursor: default;
+}
+.heatmap-month { display: block; font-size: 0.72rem; color: #aaa; }
+.heatmap-rate  { display: block; font-size: 1.05rem; font-weight: 700; margin: 0.1rem 0; }
+.heatmap-docs  { display: block; font-size: 0.68rem; color: #888; }
+.heatmap-great { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
+.heatmap-ok    { background: rgba(245, 158, 11, 0.12); border-color: #f59e0b; }
+.heatmap-warn  { background: rgba(249, 115, 22, 0.12); border-color: #f97316; }
+.heatmap-bad   { background: rgba(239, 68, 68, 0.15);  border-color: #ef4444; }
+.heatmap-empty { background: #2d2d4e; border-color: #3d3d5e; }
+.heatmap-legend {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  font-size: 0.74rem;
+}
+.heatmap-legend span {
+  padding: 0.12rem 0.4rem;
+  border-radius: 3px;
+}
+.heatmap-legend .heatmap-great { background: rgba(16, 185, 129, 0.15); }
+.heatmap-legend .heatmap-ok    { background: rgba(245, 158, 11, 0.12); }
+.heatmap-legend .heatmap-warn  { background: rgba(249, 115, 22, 0.12); }
+.heatmap-legend .heatmap-bad   { background: rgba(239, 68, 68, 0.15); }
+.heatmap-legend .heatmap-empty { background: #2d2d4e; }

@@ -751,6 +751,206 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
   );
 }
 
+function OmegaCompanyDetailPage({
+  dataReadServerId,
+  databaseName,
+  onBack
+}: {
+  dataReadServerId: string;
+  databaseName: string;
+  onBack: () => void;
+}) {
+  const [detail, setDetail] = useState<OmegaCompanyDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  async function load() {
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(
+        `/api/omega/dashboard/companies/${dataReadServerId}/${encodeURIComponent(databaseName)}`
+      );
+
+      if (!response.ok) {
+        setError(await response.text());
+        return;
+      }
+
+      setDetail(await response.json());
+    } catch (exception) {
+      setError(exception instanceof Error ? exception.message : 'Načítanie detailu zlyhalo.');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load();
+  }, [dataReadServerId, databaseName]);
+
+  return (
+    <div className="page">
+      <header>
+        <div className="back-header">
+          <button className="back-btn" onClick={onBack}>← Späť</button>
+          {detail && (
+            <h1>
+              {detail.companyName}
+              <span className="muted-label"> ({detail.databaseName})</span>
+            </h1>
+          )}
+        </div>
+        <button onClick={load} disabled={isLoading}>
+          <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
+        </button>
+      </header>
+
+      {error && <div className="status error">{error}</div>}
+      {isLoading && <div className="status">Načítavam detail...</div>}
+
+      {detail && (
+        <div className="detail-layout">
+
+          <section className="detail-card">
+            <h2>Health score</h2>
+            <div className="health-score-hero">
+              <span className={`score-pill large ${scoreClass(detail.healthScore)}`}>
+                {detail.healthScore}
+              </span>
+            </div>
+            <div className="score-breakdown">
+              {([
+                { label: 'Aktivita', value: detail.activityScore, weight: '20 %' },
+                { label: 'Completion', value: detail.completionScore, weight: '30 %' },
+                { label: 'Backlog aging', value: detail.backlogAgingScore, weight: '25 %' },
+                { label: 'Month closing', value: detail.monthClosingScore, weight: '20 %' },
+                { label: 'Data quality', value: detail.dataQualityScore, weight: '5 %' }
+              ] as const).map(({ label, value, weight }) => (
+                <div key={label} className="score-row">
+                  <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
+                  <div className="score-bar-track">
+                    <div className={`score-bar-fill ${scoreClass(value)}`} style={{ width: `${value}%` }} />
+                  </div>
+                  <span className="score-value">{value}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {detail.warningFlags.length > 0 && (
+            <section className="detail-card">
+              <h2>Varovania</h2>
+              <div className="warning-list large">
+                {detail.warningFlags.map((flag) => (
+                  <span key={flag} className={`warning-pill ${warningSeverity(flag)}`}>
+                    {warningLabel(flag)}
+                  </span>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="detail-card">
+            <h2>Workflow funnel — posledných 30 dní</h2>
+            <div className="funnel">
+              {([
+                { label: 'Zaevidované', value: detail.registered30Days },
+                { label: 'Predkontované', value: detail.preAccounted30Days },
+                { label: 'Zaúčtované', value: detail.posted30Days }
+              ] as const).map(({ label, value }) => {
+                const pct = detail.registered30Days === 0
+                  ? 0
+                  : Math.round(value * 100 / detail.registered30Days);
+                return (
+                  <div key={label} className="funnel-row">
+                    <span className="funnel-label">{label}</span>
+                    <div className="funnel-bar-track">
+                      <div className="funnel-bar-fill" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="funnel-value">
+                      {value} <span className="muted-label">({pct} %)</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="detail-card">
+            <h2>Typ dokladov — posledných 30 dní</h2>
+            <div className="type-breakdown">
+              {([
+                { label: 'Manuálne', value: detail.manual30Days },
+                { label: 'Importované', value: detail.imported30Days },
+                { label: 'Platforma / API', value: detail.platform30Days }
+              ] as const).map(({ label, value }) => (
+                <div key={label} className="type-row">
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="detail-card">
+            <h2>Backlog — nezaúčtované doklady</h2>
+            <div className="aging-grid">
+              {([
+                { label: '0–3 dni', value: detail.backlog0to3Days, cls: 'watch' },
+                { label: '4–7 dní', value: detail.backlog4to7Days, cls: 'bad' },
+                { label: '8–30 dní', value: detail.backlog8to30Days, cls: 'bad' },
+                { label: '30+ dní', value: detail.backlog30DaysPlus, cls: 'critical' }
+              ] as const).map(({ label, value, cls }) => (
+                <div key={label} className={`aging-bucket ${value > 0 ? cls : 'ok'}`}>
+                  <span className="aging-count">{value}</span>
+                  <span className="aging-label">{label}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="detail-card full-width">
+            <h2>Mesačné zaúčtovanie — posledných 12 mesiacov</h2>
+            <div className="heatmap">
+              {detail.monthlyBreakdown.map((m) => {
+                const rate = m.postingRate;
+                const cls = rate === null ? 'heatmap-empty'
+                  : rate >= 98 ? 'heatmap-great'
+                  : rate >= 95 ? 'heatmap-ok'
+                  : rate >= 90 ? 'heatmap-warn'
+                  : 'heatmap-bad';
+                const label = new Intl.DateTimeFormat('sk-SK', { month: 'short', year: '2-digit' })
+                  .format(new Date(m.year, m.month - 1, 1));
+                return (
+                  <div
+                    key={`${m.year}-${m.month}`}
+                    className={`heatmap-cell ${cls}`}
+                    title={`${label}: ${rate !== null ? rate.toFixed(1) + ' %' : 'bez dát'}`}
+                  >
+                    <span className="heatmap-month">{label}</span>
+                    <span className="heatmap-rate">{rate !== null ? `${rate.toFixed(0)} %` : '–'}</span>
+                    <span className="heatmap-docs">{m.registered} / {m.posted}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="heatmap-legend">
+              <span className="heatmap-great">≥ 98 %</span>
+              <span className="heatmap-ok">95–97 %</span>
+              <span className="heatmap-warn">90–94 %</span>
+              <span className="heatmap-bad">&lt; 90 %</span>
+              <span className="heatmap-empty">bez dát</span>
+            </div>
+          </section>
+
+        </div>
+      )}
+    </div>
+  );
+}
+
 function scoreClass(score: number) {
   if (score >= 85) {
     return 'good';
