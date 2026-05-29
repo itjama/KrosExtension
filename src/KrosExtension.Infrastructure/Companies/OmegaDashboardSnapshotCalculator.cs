@@ -53,7 +53,10 @@ internal static class OmegaDashboardSnapshotCalculator
             GetInt64(reader, "Platform30Days"),
             GetInt64(reader, "Manual30Days"),
             GetInt64(reader, "DuplicateDocumentLinks"),
-            GetInt64(reader, "DataQualityIssues"));
+            GetInt64(reader, "NullDateCount"),
+            GetInt64(reader, "OrphanLineCount"),
+            GetInt64(reader, "OrphanPaymentCount"),
+            GetInt64(reader, "UnknownCircuitCount"));
 
         var scores = CalculateScores(metrics);
         var warnings = BuildWarnings(metrics);
@@ -170,44 +173,37 @@ internal static class OmegaDashboardSnapshotCalculator
         var warnings = new List<string>();
 
         if (metrics.Backlog30DaysPlus > 0)
-        {
             warnings.Add("OLD_UNPOSTED_30D");
-        }
 
         if (metrics.Backlog7DaysPlus > 0)
-        {
             warnings.Add("OLD_UNPOSTED_7D");
-        }
 
         if (metrics.Registered30Days > 0 && metrics.Posted30Days == 0)
-        {
             warnings.Add("ZERO_POSTING");
-        }
 
         if (metrics.Previous7DaysActivity > 0 && metrics.Activity7Days < metrics.Previous7DaysActivity / 2m)
-        {
             warnings.Add("ACTIVITY_DROP");
-        }
 
         if (metrics.Imported30Days + metrics.Platform30Days > 0 && metrics.Posted30Days == 0)
-        {
             warnings.Add("IMPORT_ONLY");
-        }
 
         if (metrics.PreviousMonthPostingRate is < 95m || metrics.HistoricalPostingRate is < 98m)
-        {
             warnings.Add("BROKEN_MONTH");
-        }
 
         if (metrics.DuplicateDocumentLinks > 0)
-        {
             warnings.Add("DUPLICATES");
-        }
 
-        if (metrics.DataQualityIssues > 0)
-        {
-            warnings.Add("DATA_QUALITY");
-        }
+        if (metrics.NullDateCount > 0)
+            warnings.Add("NULL_DATE");
+
+        if (metrics.OrphanLineCount > 0)
+            warnings.Add("ORPHAN_LINES");
+
+        if (metrics.OrphanPaymentCount > 0)
+            warnings.Add("ORPHAN_PAYMENTS");
+
+        if (metrics.UnknownCircuitCount > 0)
+            warnings.Add("UNKNOWN_CIRCUIT");
 
         return warnings;
     }
@@ -273,7 +269,14 @@ internal static class OmegaDashboardSnapshotCalculator
         long Platform30Days,
         long Manual30Days,
         long DuplicateDocumentLinks,
-        long DataQualityIssues);
+        long NullDateCount,
+        long OrphanLineCount,
+        long OrphanPaymentCount,
+        long UnknownCircuitCount)
+    {
+        public long DataQualityIssues =>
+            NullDateCount + OrphanLineCount + OrphanPaymentCount + UnknownCircuitCount;
+    }
 
     private sealed record OmegaDashboardScores(
         int HealthScore,
@@ -344,36 +347,43 @@ internal static class OmegaDashboardSnapshotCalculator
         duplicate_links AS (
             SELECT COUNT_BIG(*) AS IssueCount
             FROM dbo.T228_Faktury AS f
-            JOIN dbo.T040_EUD AS e
-                ON e.C023_CisloInterneKodOkruh = f.C022_KodEvidencia
-               AND ISNULL(e.C001_Vymazany, 0) = 0
-               AND e.C030_CisloInterne = f.C030_CisloFaktury
             WHERE f.C022_KodEvidencia IN ('OF', 'OPF')
+              AND 1 < (
+                  SELECT COUNT(*)
+                  FROM dbo.T040_EUD AS e
+                  WHERE e.C023_CisloInterneKodOkruh = f.C022_KodEvidencia
+                    AND ISNULL(e.C001_Vymazany, 0) = 0
+                    AND e.C030_CisloInterne = f.C030_CisloFaktury
+              )
         ),
         data_quality AS (
-            SELECT (
-                SELECT COUNT_BIG(*)
-                FROM documents
-                WHERE RegisteredDate IS NULL
-            ) + (
-                SELECT COUNT_BIG(*)
-                FROM dbo.T041_EUD_Polozky AS p
-                LEFT JOIN dbo.T040_EUD AS h ON h.C000_ID = p.C010_IDEUD
-                WHERE h.C000_ID IS NULL
-            ) + (
-                SELECT COUNT_BIG(*)
-                FROM dbo.T047_EUD_UhradyOdpocty AS p
-                LEFT JOIN dbo.T040_EUD AS h ON h.C000_ID = p.C010_IDEUD
-                WHERE h.C000_ID IS NULL
-            ) + (
-                SELECT COUNT_BIG(*)
-                FROM dbo.T040_EUD AS e
-                LEFT JOIN dbo.T025_OkruhyUctovnychDokladov AS k
-                    ON k.C021_Kod = e.C023_CisloInterneKodOkruh
-                WHERE ISNULL(e.C001_Vymazany, 0) = 0
-                  AND e.C023_CisloInterneKodOkruh IN ('DF', 'OF', 'DPF', 'OPF', 'zDF', 'zOF')
-                  AND k.C021_Kod IS NULL
-            ) AS IssueCount
+            SELECT
+                (
+                    SELECT COUNT_BIG(*)
+                    FROM documents
+                    WHERE RegisteredDate IS NULL
+                ) AS NullDateCount,
+                (
+                    SELECT COUNT_BIG(*)
+                    FROM dbo.T041_EUD_Polozky AS p
+                    LEFT JOIN dbo.T040_EUD AS h ON h.C000_ID = p.C010_IDEUD
+                    WHERE h.C000_ID IS NULL
+                ) AS OrphanLineCount,
+                (
+                    SELECT COUNT_BIG(*)
+                    FROM dbo.T047_EUD_UhradyOdpocty AS p
+                    LEFT JOIN dbo.T040_EUD AS h ON h.C000_ID = p.C010_IDEUD
+                    WHERE h.C000_ID IS NULL
+                ) AS OrphanPaymentCount,
+                (
+                    SELECT COUNT_BIG(*)
+                    FROM dbo.T040_EUD AS e
+                    LEFT JOIN dbo.T025_OkruhyUctovnychDokladov AS k
+                        ON k.C021_Kod = e.C023_CisloInterneKodOkruh
+                    WHERE ISNULL(e.C001_Vymazany, 0) = 0
+                      AND e.C023_CisloInterneKodOkruh IN ('DF', 'OF', 'DPF', 'OPF', 'zDF', 'zOF')
+                      AND k.C021_Kod IS NULL
+                ) AS UnknownCircuitCount
         )
         SELECT daily.Registered7Days,
                daily.Posted7Days,
@@ -394,7 +404,10 @@ internal static class OmegaDashboardSnapshotCalculator
                daily.Platform30Days,
                daily.Manual30Days,
                duplicate_links.IssueCount AS DuplicateDocumentLinks,
-               data_quality.IssueCount AS DataQualityIssues
+               data_quality.NullDateCount,
+               data_quality.OrphanLineCount,
+               data_quality.OrphanPaymentCount,
+               data_quality.UnknownCircuitCount
         FROM daily
         CROSS JOIN previous_month
         CROSS JOIN historical_months

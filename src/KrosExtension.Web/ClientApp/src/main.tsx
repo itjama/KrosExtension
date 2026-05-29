@@ -711,11 +711,12 @@ function scoreClass(score: number) {
 }
 
 function warningSeverity(warning: string) {
-  if (['OLD_UNPOSTED_30D', 'ZERO_POSTING', 'BROKEN_MONTH', 'DATA_QUALITY'].includes(warning)) {
+  if (['OLD_UNPOSTED_30D', 'ZERO_POSTING', 'BROKEN_MONTH', 'UNKNOWN_CIRCUIT'].includes(warning)) {
     return 'critical';
   }
 
-  if (['OLD_UNPOSTED_7D', 'ACTIVITY_DROP', 'IMPORT_ONLY', 'DUPLICATES'].includes(warning)) {
+  if (['OLD_UNPOSTED_7D', 'ACTIVITY_DROP', 'IMPORT_ONLY', 'DUPLICATES',
+       'ORPHAN_LINES', 'ORPHAN_PAYMENTS', 'NULL_DATE'].includes(warning)) {
     return 'bad';
   }
 
@@ -731,7 +732,10 @@ function warningLabel(warning: string) {
     IMPORT_ONLY: 'import only',
     BROKEN_MONTH: 'broken month',
     DUPLICATES: 'duplicates',
-    DATA_QUALITY: 'data quality'
+    NULL_DATE: 'null date',
+    ORPHAN_LINES: 'orphan lines',
+    ORPHAN_PAYMENTS: 'orphan payments',
+    UNKNOWN_CIRCUIT: 'unknown circuit'
   };
 
   return labels[warning] ?? warning;
