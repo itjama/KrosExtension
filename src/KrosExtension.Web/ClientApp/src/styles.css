@@ -556,11 +556,11 @@ th {
 .heatmap-month { display: block; font-size: 0.72rem; color: #94a3b8; }
 .heatmap-rate  { display: block; font-size: 1.05rem; font-weight: 700; margin: 0.1rem 0; color: #f1f5f9; }
 .heatmap-docs  { display: block; font-size: 0.68rem; color: #94a3b8; }
-.heatmap-great { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
-.heatmap-ok    { background: rgba(245, 158, 11, 0.12); border-color: #f59e0b; }
-.heatmap-warn  { background: rgba(249, 115, 22, 0.12); border-color: #f97316; }
-.heatmap-bad   { background: rgba(239, 68, 68, 0.15);  border-color: #ef4444; }
-.heatmap-empty { background: #2d2d4e; border-color: #3d3d5e; }
+.heatmap-great { background: #0a3728; border-color: #10b981; }
+.heatmap-ok    { background: #2d1e00; border-color: #f59e0b; }
+.heatmap-warn  { background: #2d1200; border-color: #f97316; }
+.heatmap-bad   { background: #2d0d0d; border-color: #ef4444; }
+.heatmap-empty { background: #252540; border-color: #3d3d5e; }
 .heatmap-legend {
   display: flex;
   gap: 0.75rem;
@@ -571,8 +571,8 @@ th {
   padding: 0.12rem 0.4rem;
   border-radius: 3px;
 }
-.heatmap-legend .heatmap-great { background: rgba(16, 185, 129, 0.15); }
-.heatmap-legend .heatmap-ok    { background: rgba(245, 158, 11, 0.12); }
-.heatmap-legend .heatmap-warn  { background: rgba(249, 115, 22, 0.12); }
-.heatmap-legend .heatmap-bad   { background: rgba(239, 68, 68, 0.15); }
-.heatmap-legend .heatmap-empty { background: #2d2d4e; }
+.heatmap-legend .heatmap-great { background: #0a3728; }
+.heatmap-legend .heatmap-ok    { background: #2d1e00; }
+.heatmap-legend .heatmap-warn  { background: #2d1200; }
+.heatmap-legend .heatmap-bad   { background: #2d0d0d; }
+.heatmap-legend .heatmap-empty { background: #252540; }
