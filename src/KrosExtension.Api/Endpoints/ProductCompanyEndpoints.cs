@@ -53,6 +53,18 @@ public static class ProductCompanyEndpoints
                 var companies = await dashboardReader.GetCompaniesAsync(cancellationToken);
                 return Results.Ok(companies);
             }).WithName("GetOmegaDashboardCompanies");
+
+            productGroup.MapGet("/dashboard/companies/{dataReadServerId:guid}/{databaseName}", async (
+                Guid dataReadServerId,
+                string databaseName,
+                IOmegaCompanyDetailReader detailReader,
+                CancellationToken cancellationToken) =>
+            {
+                var detail = await detailReader.GetCompanyDetailAsync(
+                    dataReadServerId, databaseName, cancellationToken);
+
+                return detail is null ? Results.NotFound() : Results.Ok(detail);
+            }).WithName("GetOmegaCompanyDetail");
         }
 
         var group = endpoints
