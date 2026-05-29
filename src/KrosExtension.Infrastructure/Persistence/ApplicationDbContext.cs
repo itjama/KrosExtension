@@ -22,6 +22,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
     public DbSet<OmegaCompanyDashboardSnapshot> OmegaCompanyDashboardSnapshots => Set<OmegaCompanyDashboardSnapshot>();
 
+    public DbSet<OlympCompanyDashboardSnapshot> OlympCompanyDashboardSnapshots => Set<OlympCompanyDashboardSnapshot>();
+
     IQueryable<AvailableDatabase> IApplicationDbContext.AvailableDatabases => AvailableDatabases;
 
     IQueryable<CompanyDataSource> IApplicationDbContext.CompanyDataSources => CompanyDataSources;
