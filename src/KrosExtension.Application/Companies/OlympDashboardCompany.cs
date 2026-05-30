@@ -19,4 +19,5 @@ public sealed record OlympDashboardCompany(
     long Activity7Days,
     long Activity30Days,
     decimal? TrendPercent,
-    IReadOnlyList<string> WarningFlags);
+    IReadOnlyList<string> WarningFlags,
+    bool IsStale);

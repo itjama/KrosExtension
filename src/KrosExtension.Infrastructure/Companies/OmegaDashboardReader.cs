@@ -61,7 +61,8 @@ public sealed class OmegaDashboardReader(ApplicationDbContext dbContext) : IOmeg
             snapshot.StornoRate30Days,
             snapshot.PreAccountedStuck,
             snapshot.DataQualityIssues,
-            SplitWarnings(snapshot.WarningFlags))).ToList();
+            SplitWarnings(snapshot.WarningFlags),
+            snapshot.SnapshotAt.LocalDateTime.Date < DateTime.Today)).ToList();
     }
 
     private static IReadOnlyList<string> SplitWarnings(string warningFlags)

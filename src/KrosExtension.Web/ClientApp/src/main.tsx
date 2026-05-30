@@ -74,6 +74,7 @@ type OmegaDashboardCompany = {
   preAccountedStuck: number;
   dataQualityIssues: number;
   warningFlags: string[];
+  isStale: boolean;
 };
 
 type OmegaMonthlyBreakdown = {
@@ -132,6 +133,7 @@ type OlympDashboardCompany = {
   activity30Days: number;
   trendPercent: number | null;
   warningFlags: string[];
+  isStale: boolean;
 };
 
 type OlympMonthlyPeriod = {
@@ -176,16 +178,55 @@ const productLabels: Record<Product, string> = {
   omega: 'Omega'
 };
 
+function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  if (!content) return <>{children}</>;
+  return (
+    <span
+      className="tooltip-host"
+      onMouseMove={(e) => setPos({ x: e.clientX, y: e.clientY })}
+      onMouseLeave={() => setPos(null)}
+    >
+      {children}
+      {pos && (
+        <div className="tooltip-popup" style={{ left: pos.x + 14, top: pos.y - 44 }}>
+          {content}
+        </div>
+      )}
+    </span>
+  );
+}
+
+function HelpModal({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button className="help-btn" onClick={() => setOpen(true)} title="Čo zobrazuje tento pohľad?">?</button>
+      {open && (
+        <div className="help-overlay" onClick={() => setOpen(false)}>
+          <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="help-modal-header">
+              <span>{title}</span>
+              <button className="help-close" onClick={() => setOpen(false)}>✕</button>
+            </div>
+            <div className="help-modal-body">{children}</div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function App() {
   const [section, setSection] = useState<Section>('stats-omega');
-  const [settingsOpen, setSettingsOpen] = useState(true);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [omegaDetail, setOmegaDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
   const [olympDetail, setOlympDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
 
   return (
     <main className="app-shell">
       <aside className="sidebar">
-        <div className="brand">Kros Extension</div>
+        <div className="brand">LedgerPulse</div>
         <button className={section === 'stats-olymp' ? 'active' : ''} onClick={() => { setSection('stats-olymp'); setOlympDetail(null); }}>
           <BarChart3 size={18} /> Olymp
         </button>
@@ -208,6 +249,7 @@ function App() {
             </button>
           </div>
         )}
+        <div className="sidebar-copyright">© Iteo, s.r.o. 2026</div>
       </aside>
       <section className="workspace">
         {section === 'settings-servers' && <ServersPage />}
@@ -559,10 +601,24 @@ function CompaniesPage({ product }: { product: Product }) {
       {error && <div className="status error">{error}</div>}
       {status && !error && <div className="status">{status}</div>}
 
-      <table>
+      <table className="companies-table">
         <thead>
           <tr>
-            <th>Sledovať</th>
+            <th>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={companies.length > 0 && companies.every(c => c.isTracked)}
+                  ref={(el) => {
+                    if (el) el.indeterminate = companies.some(c => c.isTracked) && !companies.every(c => c.isTracked);
+                  }}
+                  onChange={(e) =>
+                    setCompanies(current => current.map(c => ({ ...c, isTracked: e.target.checked })))
+                  }
+                />
+                Sledovať
+              </label>
+            </th>
             <th>Firma</th>
             <th>Databáza</th>
             <th>Server</th>
@@ -736,6 +792,17 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
       <header>
         <h1>Omega dashboard</h1>
         <div className="actions">
+          <HelpModal title="Omega dashboard">
+            <p>Prehľad sledovaných Omega firiem na základe posledného snapshotu (UpdateData).</p>
+            <p><strong>Health (0–100)</strong> — vážený priemer: Aktivita 20 %, Completion 30 %, Backlog aging 25 %, Month closing 20 %, Data quality 5 %.</p>
+            <p><strong>7d / 30d</strong> — počet dokladov (zaevidované + zaúčtované) za posledných 7 a 30 dní.</p>
+            <p><strong>% zaúčt.</strong> — podiel zaúčtovaných z registrovaných dokladov za 30 dní.</p>
+            <p><strong>Storno</strong> — podiel storno dokladov z originálnych za 30 dní. Nad 10 % sa zobrazí oranžovo.</p>
+            <p><strong>Backlog</strong> — celkový počet nezaúčtovaných dokladov v systéme.</p>
+            <p><strong>Staré</strong> — nezaúčtované doklady staršie ako 7 dní / 30 dní.</p>
+            <p><strong>Trend</strong> — zmena aktivity oproti predchádzajúcemu 7-dňovému oknu v %.</p>
+            <p><strong>Warning flags</strong> — automaticky detegované problémy. Klikni na firmu pre podrobný detail.</p>
+          </HelpModal>
           <button onClick={load} disabled={isLoading || isUpdating}>
             <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
           </button>
@@ -757,15 +824,16 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         <thead>
           <tr>
             <th>Firma</th>
-            <th>Health</th>
-            <th>7 dní</th>
-            <th>30 dní</th>
-            <th>% zaúčt.</th>
-            <th>Backlog</th>
-            <th>Staré</th>
-            <th>Posledná aktivita</th>
-            <th>Trend</th>
-            <th>Warning flags</th>
+            <th><Tooltip content="Celkové zdravie firmy (0–100). Aktivita 20 % + Completion 30 % + Backlog aging 25 % + Month closing 20 % + Data quality 5 %">Health</Tooltip></th>
+            <th><Tooltip content="Počet dokladov (zaevidovaných + zaúčtovaných) za posledných 7 dní">7 dní</Tooltip></th>
+            <th><Tooltip content="Počet dokladov za posledných 30 dní">30 dní</Tooltip></th>
+            <th><Tooltip content="Podiel zaúčtovaných z celkovo registrovaných dokladov za 30 dní">% zaúčt.</Tooltip></th>
+            <th><Tooltip content="Podiel storno dokladov (zDF/zOF) z originálnych dokladov za posledných 30 dní. Nad 10 % sa aktivuje varovanie HIGH_STORNO_RATE.">Storno</Tooltip></th>
+            <th><Tooltip content="Celkový počet nezaúčtovaných dokladov v systéme">Backlog</Tooltip></th>
+            <th><Tooltip content="Nezaúčtované doklady staršie ako 7 dní / staršie ako 30 dní">Staré</Tooltip></th>
+            <th><Tooltip content="Dátum posledného dokladu zaevidovaného v systéme">Posledná aktivita</Tooltip></th>
+            <th><Tooltip content="Zmena aktivity posledných 7 dní oproti predchádzajúcich 7 dní v %">Trend</Tooltip></th>
+            <th><Tooltip content="Automaticky detegované problémy z dát">Warning flags</Tooltip></th>
           </tr>
         </thead>
         <tbody>
@@ -775,7 +843,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
             </tr>
           )}
           {companies.map((company) => (
-            <tr key={`${company.dataReadServerId}-${company.databaseName}`}>
+            <tr key={`${company.dataReadServerId}-${company.databaseName}`} className={company.isStale ? 'stale-row' : undefined}>
               <td>
                 <button
                   className="company-link"
@@ -791,6 +859,11 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
               <td>{company.activity7Days}</td>
               <td>{company.activity30Days}</td>
               <td>{company.postingRate30Days.toFixed(1)}%</td>
+              <td>
+                {company.stornoRate30Days !== null
+                  ? <span className={company.stornoRate30Days > 10 ? 'storno-high' : undefined}>{company.stornoRate30Days.toFixed(1)}%</span>
+                  : <span className="muted-label">–</span>}
+              </td>
               <td>{company.backlogCount}</td>
               <td>
                 <span>{company.backlog7DaysPlus} / {company.backlog30DaysPlus}</span>
@@ -804,7 +877,9 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
                 <div className="warning-list">
                   {company.warningFlags.length === 0 && <span className="warning-pill ok">OK</span>}
                   {company.warningFlags.map((warning) => (
-                    <span key={warning} className={`warning-pill ${warningSeverity(warning)}`}>{warningLabel(warning)}</span>
+                    <Tooltip key={warning} content={warningTooltip(warning)}>
+                      <span className={`warning-pill ${warningSeverity(warning)}`}>{warningLabel(warning)}</span>
+                    </Tooltip>
                   ))}
                 </div>
               </td>
@@ -877,6 +952,16 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
       <header>
         <h1>Olymp dashboard</h1>
         <div className="actions">
+          <HelpModal title="Olymp dashboard">
+            <p>Prehľad mzdového spracovania sledovaných Olymp firiem na základe posledného snapshotu (UpdateData).</p>
+            <p><strong>Health (0–100)</strong> — vážený priemer: Aktivita 25 %, Aktuálnosť miezd 35 %, Konzistencia 25 %, Pravidelnosť 15 %.</p>
+            <p><strong>Posledná aktivita</strong> — dátum posledného záznamu v activity logu Olympu.</p>
+            <p><strong>Posledné obdobie</strong> — posledné mzdové obdobie nájdené v pracVycMzda (formát RRRR/MM).</p>
+            <p><strong>Akt. mesiac</strong> — či bol aktuálny mesiac spracovaný v mzdách (✓/✗).</p>
+            <p><strong>Období v roku</strong> — počet spracovaných mzdových období v aktuálnom roku.</p>
+            <p><strong>Trend</strong> — zmena aktivity oproti predchádzajúcemu 7-dňovému oknu v %.</p>
+            <p>Klikni na firmu pre podrobný detail mzdového spracovania.</p>
+          </HelpModal>
           <button onClick={load} disabled={isLoading || isUpdating}>
             <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
           </button>
@@ -898,13 +983,13 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         <thead>
           <tr>
             <th>Firma</th>
-            <th>Health</th>
-            <th>Posledná aktivita</th>
-            <th>Posledné obdobie</th>
-            <th>Akt. mesiac</th>
-            <th>Období v roku</th>
-            <th>Trend</th>
-            <th>Warning flags</th>
+            <th><Tooltip content="Celkové zdravie firmy (0–100). Aktivita 25 % + Aktuálnosť miezd 35 % + Konzistencia 25 % + Pravidelnosť 15 %">Health</Tooltip></th>
+            <th><Tooltip content="Dátum posledného záznamu v activity logu Olympu">Posledná aktivita</Tooltip></th>
+            <th><Tooltip content="Posledné mzdové obdobie nájdené v pracVycMzda (formát RRRR/MM)">Posledné obdobie</Tooltip></th>
+            <th><Tooltip content="Či bol aktuálny mesiac spracovaný v mzdách">Akt. mesiac</Tooltip></th>
+            <th><Tooltip content="Počet spracovaných mzdových období v aktuálnom roku">Období v roku</Tooltip></th>
+            <th><Tooltip content="Zmena aktivity posledných 7 dní oproti predchádzajúcich 7 dní v %">Trend</Tooltip></th>
+            <th><Tooltip content="Automaticky detegované problémy z payroll dát">Warning flags</Tooltip></th>
           </tr>
         </thead>
         <tbody>
@@ -914,7 +999,7 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
             </tr>
           )}
           {companies.map((company) => (
-            <tr key={`${company.dataReadServerId}-${company.databaseName}`}>
+            <tr key={`${company.dataReadServerId}-${company.databaseName}`} className={company.isStale ? 'stale-row' : undefined}>
               <td>
                 <button
                   className="company-link"
@@ -940,9 +1025,9 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
                 <div className="warning-list">
                   {company.warningFlags.length === 0 && <span className="warning-pill ok">OK</span>}
                   {company.warningFlags.map((warning) => (
-                    <span key={warning} className={`warning-pill ${olympWarningSeverity(warning)}`}>
-                      {olympWarningLabel(warning)}
-                    </span>
+                    <Tooltip key={warning} content={olympWarningTooltip(warning)}>
+                      <span className={`warning-pill ${olympWarningSeverity(warning)}`}>{olympWarningLabel(warning)}</span>
+                    </Tooltip>
                   ))}
                 </div>
               </td>
@@ -1005,9 +1090,19 @@ function OlympCompanyDetailPage({
             </h1>
           )}
         </div>
-        <button onClick={load} disabled={isLoading}>
-          <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
-        </button>
+        <div className="actions">
+          <HelpModal title="Detail firmy — Olymp">
+            <p>Live dáta načítané priamo z Olymp databázy (nie zo snapshotu).</p>
+            <p><strong>Health score</strong> — vážený priemer 4 zložiek: Aktivita 25 %, Aktuálnosť miezd 35 %, Konzistencia 25 %, Pravidelnosť 15 %.</p>
+            <p><strong>Payroll status</strong> — prehľad kľúčových indikátorov mzdového spracovania.</p>
+            <p><strong>Chýbajúce obdobia</strong> — mzdové mesiace, ktoré absentujú v dátach v rámci roka.</p>
+            <p><strong>Nekonzistentné obdobia</strong> — mesiace, kde nie sú prítomné všetky 3 tabuľky (Mzda, Base, Odvod).</p>
+            <p><strong>Heatmap období</strong> — každá bunka = 1 mzdový mesiac. M = pracVycMzda, B = pracVycBase, O = pracVycOdvod. Zelená = kompletné, červená = neúplné, sivá = bez dát.</p>
+          </HelpModal>
+          <button onClick={load} disabled={isLoading}>
+            <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
+          </button>
+        </div>
       </header>
 
       {error && <div className="status error">{error}</div>}
@@ -1066,9 +1161,9 @@ function OlympCompanyDetailPage({
               <h2>Varovania</h2>
               <div className="warning-list large">
                 {detail.warningFlags.map((flag) => (
-                  <span key={flag} className={`warning-pill ${olympWarningSeverity(flag)}`}>
-                    {olympWarningLabel(flag)}
-                  </span>
+                  <Tooltip key={flag} content={olympWarningTooltip(flag)}>
+                    <span className={`warning-pill ${olympWarningSeverity(flag)}`}>{olympWarningLabel(flag)}</span>
+                  </Tooltip>
                 ))}
               </div>
             </section>
@@ -1177,9 +1272,19 @@ function OmegaCompanyDetailPage({
             </h1>
           )}
         </div>
-        <button onClick={load} disabled={isLoading}>
-          <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
-        </button>
+        <div className="actions">
+          <HelpModal title="Detail firmy — Omega">
+            <p>Live dáta načítané priamo z Omega databázy (nie zo snapshotu).</p>
+            <p><strong>Health score</strong> — vážený priemer 5 zložiek: Aktivita 20 %, Completion 30 %, Backlog aging 25 %, Month closing 20 %, Data quality 5 %.</p>
+            <p><strong>Workflow funnel</strong> — koľko % dokladov prešlo z evidencie cez predkontáciu až na zaúčtovanie za posledných 30 dní.</p>
+            <p><strong>Typ dokladov</strong> — členenie na manuálne (ručne zadané), importované a platforma/API záznamy za 30 dní.</p>
+            <p><strong>Backlog aging</strong> — nezaúčtované doklady rozdelené podľa veku (čím starší, tým väčší problém).</p>
+            <p><strong>Mesačný heatmap</strong> — posting rate za posledných 12 mesiacov. Zelená ≥ 98 %, žltá 95–97 %, oranžová 90–94 %, červená &lt; 90 %.</p>
+          </HelpModal>
+          <button onClick={load} disabled={isLoading}>
+            <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
+          </button>
+        </div>
       </header>
 
       {error && <div className="status error">{error}</div>}
@@ -1219,9 +1324,9 @@ function OmegaCompanyDetailPage({
               <h2>Varovania</h2>
               <div className="warning-list large">
                 {detail.warningFlags.map((flag) => (
-                  <span key={flag} className={`warning-pill ${warningSeverity(flag)}`}>
-                    {warningLabel(flag)}
-                  </span>
+                  <Tooltip key={flag} content={warningTooltip(flag)}>
+                    <span className={`warning-pill ${warningSeverity(flag)}`}>{warningLabel(flag)}</span>
+                  </Tooltip>
                 ))}
               </div>
             </section>
@@ -1287,35 +1392,82 @@ function OmegaCompanyDetailPage({
           </section>
 
           <section className="detail-card full-width">
-            <h2>Mesačné zaúčtovanie — posledných 12 mesiacov</h2>
+            <h2>Mesačné zaúčtovanie — {detail.accountingYear ?? 'posledných 12 mes.'}</h2>
             <div className="heatmap">
-              {detail.monthlyBreakdown.map((m) => {
-                const rate = m.postingRate;
-                const cls = rate === null ? 'heatmap-empty'
-                  : rate >= 98 ? 'heatmap-great'
-                  : rate >= 95 ? 'heatmap-ok'
-                  : rate >= 90 ? 'heatmap-warn'
-                  : 'heatmap-bad';
-                const label = new Intl.DateTimeFormat('sk-SK', { month: 'short', year: '2-digit' })
-                  .format(new Date(m.year, m.month - 1, 1));
-                return (
-                  <div
-                    key={`${m.year}-${m.month}`}
-                    className={`heatmap-cell ${cls}`}
-                    title={`${label}: ${rate !== null ? rate.toFixed(1) + ' %' : 'bez dát'}`}
-                  >
-                    <span className="heatmap-month">{label}</span>
-                    <span className="heatmap-rate">{rate !== null ? `${rate.toFixed(0)} %` : '–'}</span>
-                    <span className="heatmap-docs">{m.registered} / {m.posted}</span>
-                  </div>
+              {(() => {
+                const now = new Date();
+                const todayYear = now.getFullYear();
+                const todayMonth = now.getMonth() + 1;
+                const startYear = detail.accountingYear ?? todayYear;
+                const isCurrentYear = startYear >= todayYear;
+
+                const dataMap = new Map(
+                  detail.monthlyBreakdown.map(m => [`${m.year}-${m.month}`, m])
                 );
-              })}
+
+                const existingKeys = new Set(detail.monthlyBreakdown.map(m => `${m.year}-${m.month}`));
+
+                const lastEntry = detail.monthlyBreakdown.length > 0
+                  ? detail.monthlyBreakdown.reduce((max, m) =>
+                      m.year > max.year || (m.year === max.year && m.month > max.month) ? m : max
+                    )
+                  : null;
+
+                // Current year: fill up to today (months not yet processed = problem)
+                // Past year: fill only up to the last existing data month
+                const fillEndYear = isCurrentYear ? todayYear : lastEntry?.year ?? startYear;
+                const fillEndMonth = isCurrentYear ? todayMonth : lastEntry?.month ?? 0;
+
+                const missingEntries: { year: number; month: number }[] = [];
+                if (isCurrentYear || lastEntry) {
+                  for (let y = startYear; y <= fillEndYear; y++) {
+                    const endM = y === fillEndYear ? fillEndMonth : 12;
+                    for (let m = 1; m <= endM; m++) {
+                      if (!existingKeys.has(`${y}-${m}`)) {
+                        missingEntries.push({ year: y, month: m });
+                      }
+                    }
+                  }
+                }
+
+                const allEntries = [
+                  ...detail.monthlyBreakdown.map(m => ({ year: m.year, month: m.month, missing: false })),
+                  ...missingEntries.map(e => ({ ...e, missing: true }))
+                ].sort((a, b) => a.year !== b.year ? a.year - b.year : a.month - b.month);
+
+                return allEntries.map(({ year, month, missing }) => {
+                  const m = dataMap.get(`${year}-${month}`);
+                  const rate = m?.postingRate ?? null;
+                  const registered = m?.registered ?? 0;
+                  const posted = m?.posted ?? 0;
+                  const cls = missing ? 'heatmap-missing'
+                    : rate === null ? 'heatmap-empty'
+                    : rate >= 98 ? 'heatmap-great'
+                    : rate >= 95 ? 'heatmap-ok'
+                    : rate >= 90 ? 'heatmap-warn'
+                    : 'heatmap-bad';
+                  const label = new Intl.DateTimeFormat('sk-SK', { month: 'short', year: '2-digit' })
+                    .format(new Date(year, month - 1, 1));
+                  return (
+                    <div
+                      key={`${year}-${month}`}
+                      className={`heatmap-cell ${cls}`}
+                      title={`${label}: ${missing ? 'žiadne doklady — problém' : rate !== null ? rate.toFixed(1) + ' %' : 'bez dát'} (${registered} / ${posted})`}
+                    >
+                      <span className="heatmap-month">{label}</span>
+                      <span className="heatmap-rate">{missing ? '!' : rate !== null ? `${rate.toFixed(0)} %` : '–'}</span>
+                      <span className="heatmap-docs">{registered} / {posted}</span>
+                    </div>
+                  );
+                });
+              })()}
             </div>
             <div className="heatmap-legend">
               <span className="heatmap-great">≥ 98 %</span>
               <span className="heatmap-ok">95–97 %</span>
               <span className="heatmap-warn">90–94 %</span>
               <span className="heatmap-bad">&lt; 90 %</span>
+              <span className="heatmap-missing">chýba</span>
               <span className="heatmap-empty">bez dát</span>
             </div>
           </section>
@@ -1399,6 +1551,38 @@ function olympWarningLabel(warning: string) {
   };
 
   return labels[warning] ?? warning;
+}
+
+function warningTooltip(warning: string) {
+  const tooltips: Record<string, string> = {
+    OLD_UNPOSTED_30D: 'Existujú nezaúčtované doklady staršie ako 30 dní',
+    OLD_UNPOSTED_7D: 'Existujú nezaúčtované doklady staršie ako 7 dní',
+    ZERO_POSTING: 'Za 30 dní sú registrované doklady, ale žiadne zaúčtované',
+    ACTIVITY_DROP: 'Aktivita posledných 7 dní klesla pod 50 % predchádzajúceho 7-dňového okna',
+    IMPORT_ONLY: 'Doklady prichádzajú cez import/platformu, ale žiadne nie sú zaúčtované',
+    BROKEN_MONTH: 'Predchádzajúci mesiac má <95 % alebo historický priemer <98 % zaúčtovaných',
+    HIGH_STORNO_RATE: 'Storno rate >10 % za posledných 30 dní — veľa rušených dokladov',
+    STUCK_PREACCOUNTED: 'Doklady sú predkontované, ale stále nie sú zaúčtované',
+    NULL_DATE: 'Existujú doklady s chýbajúcim dátumom zaevidovania',
+    ORPHAN_LINES: 'Riadky dokladov bez zodpovedajúcej hlavičky — narušená integrita dát',
+    ORPHAN_PAYMENTS: 'Platby/odpočty bez zodpovedajúcej hlavičky — narušená integrita dát',
+    UNKNOWN_CIRCUIT: 'Doklady s kódom okruhu, ktorý neexistuje v číselníku T025'
+  };
+  return tooltips[warning] ?? '';
+}
+
+function olympWarningTooltip(warning: string) {
+  const tooltips: Record<string, string> = {
+    CURRENT_MONTH_MISSING: 'Aktuálny mesiac nebol nájdený v mzdovom spracovaní',
+    PAYROLL_MONTHS_BEHIND: 'Mzdy sú oneskorené — posledné spracované obdobie je o viac ako mesiac staré',
+    INACTIVE_30D: 'Žiadna aktivita v Olympe za posledných 30 dní',
+    INACTIVE_14D: 'Žiadna aktivita v Olympe za posledných 14 dní',
+    MISSING_PERIODS: 'Niektoré mzdové obdobia v rámci roka v dátach chýbajú',
+    PAYROLL_INCONSISTENCY: 'Niektoré obdobia nie sú prítomné vo všetkých 3 tabuľkách (Mzda / Base / Odvod)',
+    NULL_STARTTIME: 'Záznamy v activity logu s prázdnym časom začatia (StartTime)',
+    LOW_ACTIVITY: 'Aktivita je výrazne nižšia ako normálne'
+  };
+  return tooltips[warning] ?? '';
 }
 
 function formatDate(value: string | null) {

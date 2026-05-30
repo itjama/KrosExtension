@@ -33,4 +33,5 @@ public sealed record OmegaDashboardCompany(
     decimal? StornoRate30Days,
     long PreAccountedStuck,
     long DataQualityIssues,
-    IReadOnlyList<string> WarningFlags);
+    IReadOnlyList<string> WarningFlags,
+    bool IsStale);

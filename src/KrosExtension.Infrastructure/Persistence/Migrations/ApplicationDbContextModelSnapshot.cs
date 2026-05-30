@@ -349,8 +349,8 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset");
 
                     b.Property<decimal?>("StornoRate30Days")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                        .HasPrecision(8, 2)
+                        .HasColumnType("decimal(8,2)");
 
                     b.Property<decimal?>("TrendPercent")
                         .HasPrecision(8, 2)

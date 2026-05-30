@@ -9,3 +9,13 @@ src/KrosExtension.Web/ClientApp/dist/
 data/localdb/
 *.user
 *.suo
+dist/api/cs
+dist/api/de
+dist/api/es
+dist/api/fr
+dist/api/it
+dist/api/ja
+dist/api/ko
+dist/api/pl
+dist
+dist.zip

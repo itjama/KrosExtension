@@ -2,10 +2,13 @@ using KrosExtension.Application.Companies;
 using KrosExtension.Domain.Configuration;
 using KrosExtension.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace KrosExtension.Infrastructure.Companies;
 
-public sealed class CompanyDataRefreshService(ApplicationDbContext dbContext) : ICompanyDataRefreshService
+public sealed class CompanyDataRefreshService(
+    ApplicationDbContext dbContext,
+    ILogger<CompanyDataRefreshService> logger) : ICompanyDataRefreshService
 {
     public async Task<CompanyDataRefreshResult> UpdateDataAsync(
         ProductType productType,
@@ -34,84 +37,92 @@ public sealed class CompanyDataRefreshService(ApplicationDbContext dbContext) : 
 
         foreach (var company in companies)
         {
-            var server = servers.FirstOrDefault(item => item.Id == company.DataReadServerId);
-
-            if (server is null)
+            try
             {
-                skipped.Add(company.DatabaseName);
-                continue;
-            }
+                var server = servers.FirstOrDefault(item => item.Id == company.DataReadServerId);
 
-            var companyInfo = await CompanyDatabaseInfoReader.ReadAsync(
-                server,
-                productType,
-                company.DatabaseName,
-                cancellationToken);
-
-            if (companyInfo.Name is null)
-            {
-                skipped.Add(company.DatabaseName);
-                continue;
-            }
-
-            company.Update(
-                CompanyDatabaseInfoReader.FormatCompanyName(companyInfo.Name, companyInfo.AccountingYear),
-                true,
-                companyInfo.AccountingYear);
-
-            if (productType == ProductType.Omega)
-            {
-                var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
-                var outdated = await dbContext.OmegaCompanyDashboardSnapshots
-                    .Where(s => s.DataReadServerId == company.DataReadServerId
-                             && s.DatabaseName == company.DatabaseName
-                             && s.SnapshotAt < cutoff)
-                    .ToListAsync(cancellationToken);
-
-                if (outdated.Count > 0)
+                if (server is null)
                 {
-                    dbContext.OmegaCompanyDashboardSnapshots.RemoveRange(outdated);
+                    skipped.Add(company.DatabaseName);
+                    continue;
                 }
 
-                var snapshot = await OmegaDashboardSnapshotCalculator.ReadSnapshotAsync(
+                var companyInfo = await CompanyDatabaseInfoReader.ReadAsync(
                     server,
-                    company,
-                    DateTime.Today,
+                    productType,
+                    company.DatabaseName,
                     cancellationToken);
 
-                if (snapshot is not null)
+                if (companyInfo.Name is null)
                 {
-                    dbContext.OmegaCompanyDashboardSnapshots.Add(snapshot);
+                    skipped.Add(company.DatabaseName);
+                    continue;
                 }
-            }
 
-            if (productType == ProductType.Olymp)
+                company.Update(
+                    CompanyDatabaseInfoReader.FormatCompanyName(companyInfo.Name, companyInfo.AccountingYear),
+                    true,
+                    companyInfo.AccountingYear);
+
+                if (productType == ProductType.Omega)
+                {
+                    var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+                    var outdated = await dbContext.OmegaCompanyDashboardSnapshots
+                        .Where(s => s.DataReadServerId == company.DataReadServerId
+                                 && s.DatabaseName == company.DatabaseName
+                                 && s.SnapshotAt < cutoff)
+                        .ToListAsync(cancellationToken);
+
+                    if (outdated.Count > 0)
+                    {
+                        dbContext.OmegaCompanyDashboardSnapshots.RemoveRange(outdated);
+                    }
+
+                    var snapshot = await OmegaDashboardSnapshotCalculator.ReadSnapshotAsync(
+                        server,
+                        company,
+                        DateTime.Today,
+                        cancellationToken);
+
+                    if (snapshot is not null)
+                    {
+                        dbContext.OmegaCompanyDashboardSnapshots.Add(snapshot);
+                    }
+                }
+
+                if (productType == ProductType.Olymp)
+                {
+                    var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
+                    var outdated = await dbContext.OlympCompanyDashboardSnapshots
+                        .Where(s => s.DataReadServerId == company.DataReadServerId
+                                 && s.DatabaseName == company.DatabaseName
+                                 && s.SnapshotAt < cutoff)
+                        .ToListAsync(cancellationToken);
+
+                    if (outdated.Count > 0)
+                    {
+                        dbContext.OlympCompanyDashboardSnapshots.RemoveRange(outdated);
+                    }
+
+                    var snapshot = await OlympDashboardSnapshotCalculator.ReadSnapshotAsync(
+                        server,
+                        company,
+                        DateTime.Today,
+                        cancellationToken);
+
+                    if (snapshot is not null)
+                    {
+                        dbContext.OlympCompanyDashboardSnapshots.Add(snapshot);
+                    }
+                }
+
+                refreshed++;
+            }
+            catch (Exception ex)
             {
-                var cutoff = DateTimeOffset.UtcNow.AddDays(-30);
-                var outdated = await dbContext.OlympCompanyDashboardSnapshots
-                    .Where(s => s.DataReadServerId == company.DataReadServerId
-                             && s.DatabaseName == company.DatabaseName
-                             && s.SnapshotAt < cutoff)
-                    .ToListAsync(cancellationToken);
-
-                if (outdated.Count > 0)
-                {
-                    dbContext.OlympCompanyDashboardSnapshots.RemoveRange(outdated);
-                }
-
-                var snapshot = await OlympDashboardSnapshotCalculator.ReadSnapshotAsync(
-                    server,
-                    company,
-                    DateTime.Today,
-                    cancellationToken);
-
-                if (snapshot is not null)
-                {
-                    dbContext.OlympCompanyDashboardSnapshots.Add(snapshot);
-                }
+                logger.LogError(ex, "Failed to refresh company {DatabaseName} — skipping", company.DatabaseName);
+                skipped.Add(company.DatabaseName);
             }
-
-            refreshed++;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

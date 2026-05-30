@@ -39,7 +39,8 @@ public sealed class OlympDashboardReader(ApplicationDbContext dbContext) : IOlym
             s.Activity7Days,
             s.Activity30Days,
             s.TrendPercent,
-            SplitWarnings(s.WarningFlags))).ToList();
+            SplitWarnings(s.WarningFlags),
+            s.SnapshotAt.LocalDateTime.Date < DateTime.Today)).ToList();
     }
 
     private static IReadOnlyList<string> SplitWarnings(string flags) =>

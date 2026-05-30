@@ -22,7 +22,7 @@ $clientApp = Join-Path $repoRoot 'src\KrosExtension.Web\ClientApp'
 $apiProj   = Join-Path $repoRoot 'src\KrosExtension.Api\KrosExtension.Api.csproj'
 $webProj   = Join-Path $repoRoot 'src\KrosExtension.Web\KrosExtension.Web.csproj'
 
-Write-Host "=== Kros Extension — Build Distribution ===" -ForegroundColor Cyan
+Write-Host "=== Kros Extension - Build Distribution ===" -ForegroundColor Cyan
 
 # 1. Frontend
 Write-Host "`n[1/3] Frontend build..." -ForegroundColor Yellow

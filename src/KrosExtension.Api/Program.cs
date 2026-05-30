@@ -1,4 +1,5 @@
 using KrosExtension.Api.Endpoints;
+using KrosExtension.Api.Services;
 using KrosExtension.Application;
 using KrosExtension.Infrastructure;
 using KrosExtension.Infrastructure.Persistence;
@@ -14,6 +15,7 @@ builder.Host.UseWindowsService(options =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddHostedService<DataRefreshBackgroundService>();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
