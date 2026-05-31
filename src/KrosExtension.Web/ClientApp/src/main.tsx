@@ -8,6 +8,11 @@ type Product = 'olymp' | 'omega';
 type AuthenticationMode = 'Windows' | 'SqlLogin';
 type Section = 'stats-olymp' | 'stats-omega' | 'settings-servers' | 'settings-olymp' | 'settings-omega';
 
+type DashboardFilterState = {
+  nameQuery: string;
+  selectedFlags: string[];
+};
+
 type DataReadServer = {
   id: string;
   displayName: string;
@@ -222,6 +227,10 @@ const productLabels: Record<Product, string> = {
   olymp: 'Olymp',
   omega: 'Omega'
 };
+
+const FILTER_KEY_OMEGA = 'ledgerpulse.filters.omega';
+const FILTER_KEY_OLYMP = 'ledgerpulse.filters.olymp';
+const EMPTY_FILTER: DashboardFilterState = { nameQuery: '', selectedFlags: [] };
 
 function Tooltip({ content, children }: { content: string; children: React.ReactNode }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -1720,6 +1729,28 @@ function formatSnapshotAge(isoDate: string | null) {
 function formatPeriodId(periodId: string | null) {
   if (!periodId || periodId.length !== 6) return periodId ?? '–';
   return `${periodId.slice(0, 4)}/${periodId.slice(4)}`;
+}
+
+function readFilters(key: string): DashboardFilterState {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return EMPTY_FILTER;
+    const parsed = JSON.parse(raw) as DashboardFilterState;
+    if (typeof parsed.nameQuery !== 'string' || !Array.isArray(parsed.selectedFlags)) {
+      return EMPTY_FILTER;
+    }
+    return parsed;
+  } catch {
+    return EMPTY_FILTER;
+  }
+}
+
+function writeFilters(key: string, state: DashboardFilterState): void {
+  if (!state.nameQuery && state.selectedFlags.length === 0) {
+    localStorage.removeItem(key);
+  } else {
+    localStorage.setItem(key, JSON.stringify(state));
+  }
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
