@@ -1734,14 +1734,18 @@ function formatPeriodId(periodId: string | null) {
 function readFilters(key: string): DashboardFilterState {
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return EMPTY_FILTER;
+    if (!raw) return { ...EMPTY_FILTER };
     const parsed = JSON.parse(raw) as DashboardFilterState;
-    if (typeof parsed.nameQuery !== 'string' || !Array.isArray(parsed.selectedFlags)) {
-      return EMPTY_FILTER;
+    if (
+      typeof parsed.nameQuery !== 'string' ||
+      !Array.isArray(parsed.selectedFlags) ||
+      !parsed.selectedFlags.every((f) => typeof f === 'string')
+    ) {
+      return { ...EMPTY_FILTER };
     }
     return parsed;
   } catch {
-    return EMPTY_FILTER;
+    return { ...EMPTY_FILTER };
   }
 }
 
