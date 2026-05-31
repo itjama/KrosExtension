@@ -791,6 +791,11 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
   const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState<DashboardFilterState>(() => readFilters(FILTER_KEY_OMEGA));
+
+  useEffect(() => {
+    writeFilters(FILTER_KEY_OMEGA, filters);
+  }, [filters]);
 
   async function load() {
     setIsLoading(true);
@@ -842,6 +847,17 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
     void load();
   }, []);
 
+  const availableFlags = [...new Set(companies.flatMap(c => c.warningFlags))]
+    .sort((a, b) => {
+      const order = (f: string) => { const s = warningSeverity(f); return s === 'critical' ? 0 : s === 'bad' ? 1 : 2; };
+      return order(a) - order(b);
+    });
+
+  const filteredCompanies = companies.filter(c =>
+    c.companyName.toLowerCase().includes(filters.nameQuery.toLowerCase()) &&
+    (filters.selectedFlags.length === 0 || filters.selectedFlags.some(f => c.warningFlags.includes(f)))
+  );
+
   return (
     <div className="page">
       <header>
@@ -875,6 +891,44 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         </div>
       )}
 
+      <div className="filter-bar">
+        <div className="filter-bar-row">
+          <input
+            className="filter-search"
+            placeholder="🔍 Hľadať firmu..."
+            value={filters.nameQuery}
+            onChange={(e) => setFilters(f => ({ ...f, nameQuery: e.target.value }))}
+          />
+          <button className="filter-reset" onClick={() => setFilters(EMPTY_FILTER)}>
+            ✕ Reset
+          </button>
+          <span className="filter-count">{filteredCompanies.length} / {companies.length}</span>
+        </div>
+        {availableFlags.length > 0 && (
+          <div className="filter-flags">
+            <span className="filter-flags-label">Flagy:</span>
+            {availableFlags.map(flag => {
+              const active = filters.selectedFlags.includes(flag);
+              const sev = warningSeverity(flag);
+              return (
+                <button
+                  key={flag}
+                  className={`filter-flag-pill ${sev}${active ? ' active' : ''}`}
+                  onClick={() => setFilters(f => ({
+                    ...f,
+                    selectedFlags: active
+                      ? f.selectedFlags.filter(s => s !== flag)
+                      : [...f.selectedFlags, flag]
+                  }))}
+                >
+                  {warningLabel(flag)}{active ? ' ✕' : ''}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <table className="risk-table">
         <thead>
           <tr>
@@ -897,7 +951,12 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
               <td colSpan={10}>Omega dashboard zatiaľ nemá snapshoty. Spusti UpdateData.</td>
             </tr>
           )}
-          {companies.map((company) => (
+          {!isLoading && companies.length > 0 && filteredCompanies.length === 0 && (
+            <tr>
+              <td colSpan={10}>Žiadna firma nezodpovedá filtru.</td>
+            </tr>
+          )}
+          {filteredCompanies.map((company) => (
             <tr key={`${company.dataReadServerId}-${company.databaseName}`} className={company.isStale ? 'stale-row' : undefined}>
               <td>
                 <button
