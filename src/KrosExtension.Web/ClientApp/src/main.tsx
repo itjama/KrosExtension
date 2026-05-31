@@ -891,43 +891,48 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         </div>
       )}
 
-      <div className="filter-bar">
-        <div className="filter-bar-row">
-          <input
-            className="filter-search"
-            placeholder="🔍 Hľadať firmu..."
-            value={filters.nameQuery}
-            onChange={(e) => setFilters(f => ({ ...f, nameQuery: e.target.value }))}
-          />
-          <button className="filter-reset" onClick={() => setFilters(EMPTY_FILTER)}>
-            ✕ Reset
-          </button>
-          <span className="filter-count">{filteredCompanies.length} / {companies.length}</span>
-        </div>
-        {availableFlags.length > 0 && (
-          <div className="filter-flags">
-            <span className="filter-flags-label">Flagy:</span>
-            {availableFlags.map(flag => {
-              const active = filters.selectedFlags.includes(flag);
-              const sev = warningSeverity(flag);
-              return (
-                <button
-                  key={flag}
-                  className={`filter-flag-pill ${sev}${active ? ' active' : ''}`}
-                  onClick={() => setFilters(f => ({
-                    ...f,
-                    selectedFlags: active
-                      ? f.selectedFlags.filter(s => s !== flag)
-                      : [...f.selectedFlags, flag]
-                  }))}
-                >
-                  {warningLabel(flag)}{active ? ' ✕' : ''}
-                </button>
-              );
-            })}
+      {companies.length > 0 && (
+        <div className="filter-bar">
+          <div className="filter-bar-row">
+            <input
+              className="filter-search"
+              placeholder="🔍 Hľadať firmu..."
+              value={filters.nameQuery}
+              onChange={(e) => setFilters(f => ({ ...f, nameQuery: e.target.value }))}
+            />
+            <button className="filter-reset" onClick={() => setFilters({ ...EMPTY_FILTER })}>
+              ✕ Reset
+            </button>
+            <span className="filter-count">{filteredCompanies.length} / {companies.length}</span>
           </div>
-        )}
-      </div>
+          {availableFlags.length > 0 && (
+            <div className="filter-flags">
+              <span className="filter-flags-label">Flagy:</span>
+              {availableFlags.map(flag => {
+                const active = filters.selectedFlags.includes(flag);
+                const sev = warningSeverity(flag);
+                return (
+                  <button
+                    key={flag}
+                    className={`filter-flag-pill ${sev}${active ? ' active' : ''}`}
+                    onClick={() => setFilters(f => {
+                      const isActive = f.selectedFlags.includes(flag);
+                      return {
+                        ...f,
+                        selectedFlags: isActive
+                          ? f.selectedFlags.filter(s => s !== flag)
+                          : [...f.selectedFlags, flag]
+                      };
+                    })}
+                  >
+                    {warningLabel(flag)}{active ? ' ✕' : ''}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       <table className="risk-table">
         <thead>
