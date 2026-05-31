@@ -810,7 +810,14 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         return;
       }
 
-      setCompanies(await response.json());
+      const newCompanies = await response.json() as OmegaDashboardCompany[];
+      setCompanies(newCompanies);
+      setFilters(f => ({
+        ...f,
+        selectedFlags: f.selectedFlags.filter(flag =>
+          newCompanies.some(c => c.warningFlags.includes(flag))
+        )
+      }));
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : 'Načítanie Omega dashboardu zlyhalo.');
       setCompanies([]);
@@ -909,7 +916,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
             <div className="filter-flags">
               <span className="filter-flags-label">Flagy:</span>
               {availableFlags.map(flag => {
-                const active = filters.selectedFlags.includes(flag);
+                const active = filters.selectedFlags.includes(flag); // display only; onClick re-reads from updater arg for correct batching
                 const sev = warningSeverity(flag);
                 return (
                   <button
@@ -1034,7 +1041,14 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         return;
       }
 
-      setCompanies(await response.json());
+      const newCompanies = await response.json() as OlympDashboardCompany[];
+      setCompanies(newCompanies);
+      setFilters(f => ({
+        ...f,
+        selectedFlags: f.selectedFlags.filter(flag =>
+          newCompanies.some(c => c.warningFlags.includes(flag))
+        )
+      }));
     } catch (exception) {
       setError(exception instanceof Error ? exception.message : 'Načítanie Olymp dashboardu zlyhalo.');
       setCompanies([]);
@@ -1132,7 +1146,7 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
             <div className="filter-flags">
               <span className="filter-flags-label">Flagy:</span>
               {availableFlags.map(flag => {
-                const active = filters.selectedFlags.includes(flag);
+                const active = filters.selectedFlags.includes(flag); // display only; onClick re-reads from updater arg for correct batching
                 const sev = olympWarningSeverity(flag);
                 return (
                   <button
