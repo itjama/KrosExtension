@@ -308,6 +308,33 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                     b.Property<DateTime?>("LastActivityDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("LateEntryDfAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("LateEntryDfCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("LateEntryDfMaxDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LateEntryOfAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("LateEntryOfCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("LateEntryOfMaxDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LateEntryPdAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("LateEntryPdCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("LateEntryPdMaxDays")
+                        .HasColumnType("int");
+
                     b.Property<long>("Manual30Days")
                         .HasColumnType("bigint");
 
@@ -322,6 +349,42 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
 
                     b.Property<long>("Posted30Days")
                         .HasColumnType("bigint");
+
+                    b.Property<int?>("PostingLagBvAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PostingLagBvCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("PostingLagBvMaxDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PostingLagDfAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PostingLagDfCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("PostingLagDfMaxDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PostingLagOfAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PostingLagOfCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("PostingLagOfMaxDays")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PostingLagPdAvgDays")
+                        .HasColumnType("int");
+
+                    b.Property<long>("PostingLagPdCount")
+                        .HasColumnType("bigint");
+
+                    b.Property<int?>("PostingLagPdMaxDays")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("PostingRate30Days")
                         .HasPrecision(5, 2)
@@ -351,6 +414,9 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                     b.Property<decimal?>("StornoRate30Days")
                         .HasPrecision(8, 2)
                         .HasColumnType("decimal(8,2)");
+
+                    b.Property<int>("TimelinessScore")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("TrendPercent")
                         .HasPrecision(8, 2)

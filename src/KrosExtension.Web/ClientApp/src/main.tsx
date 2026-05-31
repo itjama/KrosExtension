@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { createPortal } from 'react-dom';
 import { BarChart3, ChevronDown, Database, RefreshCw, Save, Server, Settings, Trash2 } from 'lucide-react';
 import './styles.css';
 
@@ -53,6 +54,7 @@ type OmegaDashboardCompany = {
   backlogAgingScore: number;
   monthClosingScore: number;
   dataQualityScore: number;
+  timelinessScore: number;
   activity7Days: number;
   activity30Days: number;
   previous7DaysActivity: number;
@@ -74,6 +76,27 @@ type OmegaDashboardCompany = {
   preAccountedStuck: number;
   dataQualityIssues: number;
   warningFlags: string[];
+  postingLagDfAvgDays: number | null;
+  postingLagDfMaxDays: number | null;
+  postingLagDfCount: number;
+  postingLagOfAvgDays: number | null;
+  postingLagOfMaxDays: number | null;
+  postingLagOfCount: number;
+  postingLagPdAvgDays: number | null;
+  postingLagPdMaxDays: number | null;
+  postingLagPdCount: number;
+  postingLagBvAvgDays: number | null;
+  postingLagBvMaxDays: number | null;
+  postingLagBvCount: number;
+  lateEntryDfAvgDays: number | null;
+  lateEntryDfMaxDays: number | null;
+  lateEntryDfCount: number;
+  lateEntryOfAvgDays: number | null;
+  lateEntryOfMaxDays: number | null;
+  lateEntryOfCount: number;
+  lateEntryPdAvgDays: number | null;
+  lateEntryPdMaxDays: number | null;
+  lateEntryPdCount: number;
   isStale: boolean;
 };
 
@@ -98,6 +121,7 @@ type OmegaCompanyDetail = {
   backlogAgingScore: number;
   monthClosingScore: number;
   dataQualityScore: number;
+  timelinessScore: number;
   registered30Days: number;
   preAccounted30Days: number;
   posted30Days: number;
@@ -111,6 +135,27 @@ type OmegaCompanyDetail = {
   backlog30DaysPlus: number;
   monthlyBreakdown: OmegaMonthlyBreakdown[];
   warningFlags: string[];
+  postingLagDfAvgDays: number | null;
+  postingLagDfMaxDays: number | null;
+  postingLagDfCount: number;
+  postingLagOfAvgDays: number | null;
+  postingLagOfMaxDays: number | null;
+  postingLagOfCount: number;
+  postingLagPdAvgDays: number | null;
+  postingLagPdMaxDays: number | null;
+  postingLagPdCount: number;
+  postingLagBvAvgDays: number | null;
+  postingLagBvMaxDays: number | null;
+  postingLagBvCount: number;
+  lateEntryDfAvgDays: number | null;
+  lateEntryDfMaxDays: number | null;
+  lateEntryDfCount: number;
+  lateEntryOfAvgDays: number | null;
+  lateEntryOfMaxDays: number | null;
+  lateEntryOfCount: number;
+  lateEntryPdAvgDays: number | null;
+  lateEntryPdMaxDays: number | null;
+  lateEntryPdCount: number;
 };
 
 type OlympDashboardCompany = {
@@ -188,10 +233,11 @@ function Tooltip({ content, children }: { content: string; children: React.React
       onMouseLeave={() => setPos(null)}
     >
       {children}
-      {pos && (
+      {pos && createPortal(
         <div className="tooltip-popup" style={{ left: pos.x + 14, top: pos.y - 44 }}>
           {content}
-        </div>
+        </div>,
+        document.body
       )}
     </span>
   );
@@ -794,7 +840,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         <div className="actions">
           <HelpModal title="Omega dashboard">
             <p>Prehľad sledovaných Omega firiem na základe posledného snapshotu (UpdateData).</p>
-            <p><strong>Health (0–100)</strong> — vážený priemer: Aktivita 20 %, Completion 30 %, Backlog aging 25 %, Month closing 20 %, Data quality 5 %.</p>
+            <p><strong>Health (0–100)</strong> — vážený priemer: Aktivita 17 %, Completion 25 %, Backlog aging 23 %, Month closing 15 %, Data quality 5 %, Timeliness 15 %.</p>
             <p><strong>7d / 30d</strong> — počet dokladov (zaevidované + zaúčtované) za posledných 7 a 30 dní.</p>
             <p><strong>% zaúčt.</strong> — podiel zaúčtovaných z registrovaných dokladov za 30 dní.</p>
             <p><strong>Storno</strong> — podiel storno dokladov z originálnych za 30 dní. Nad 10 % sa zobrazí oranžovo.</p>
@@ -824,7 +870,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
         <thead>
           <tr>
             <th>Firma</th>
-            <th><Tooltip content="Celkové zdravie firmy (0–100). Aktivita 20 % + Completion 30 % + Backlog aging 25 % + Month closing 20 % + Data quality 5 %">Health</Tooltip></th>
+            <th><Tooltip content="Celkové zdravie firmy (0–100). Aktivita 17 % + Completion 25 % + Backlog aging 23 % + Month closing 15 % + Data quality 5 % + Timeliness 15 %">Health</Tooltip></th>
             <th><Tooltip content="Počet dokladov (zaevidovaných + zaúčtovaných) za posledných 7 dní">7 dní</Tooltip></th>
             <th><Tooltip content="Počet dokladov za posledných 30 dní">30 dní</Tooltip></th>
             <th><Tooltip content="Podiel zaúčtovaných z celkovo registrovaných dokladov za 30 dní">% zaúčt.</Tooltip></th>
@@ -1275,7 +1321,7 @@ function OmegaCompanyDetailPage({
         <div className="actions">
           <HelpModal title="Detail firmy — Omega">
             <p>Live dáta načítané priamo z Omega databázy (nie zo snapshotu).</p>
-            <p><strong>Health score</strong> — vážený priemer 5 zložiek: Aktivita 20 %, Completion 30 %, Backlog aging 25 %, Month closing 20 %, Data quality 5 %.</p>
+            <p><strong>Health score</strong> — vážený priemer 6 zložiek: Aktivita 17 %, Completion 25 %, Backlog aging 23 %, Month closing 15 %, Data quality 5 %, Timeliness 15 %.</p>
             <p><strong>Workflow funnel</strong> — koľko % dokladov prešlo z evidencie cez predkontáciu až na zaúčtovanie za posledných 30 dní.</p>
             <p><strong>Typ dokladov</strong> — členenie na manuálne (ručne zadané), importované a platforma/API záznamy za 30 dní.</p>
             <p><strong>Backlog aging</strong> — nezaúčtované doklady rozdelené podľa veku (čím starší, tým väčší problém).</p>
@@ -1302,11 +1348,12 @@ function OmegaCompanyDetailPage({
             </div>
             <div className="score-breakdown">
               {([
-                { label: 'Aktivita', value: detail.activityScore, weight: '20 %' },
-                { label: 'Completion', value: detail.completionScore, weight: '30 %' },
-                { label: 'Backlog aging', value: detail.backlogAgingScore, weight: '25 %' },
-                { label: 'Month closing', value: detail.monthClosingScore, weight: '20 %' },
-                { label: 'Data quality', value: detail.dataQualityScore, weight: '5 %' }
+                { label: 'Aktivita', value: detail.activityScore, weight: '17 %' },
+                { label: 'Completion', value: detail.completionScore, weight: '25 %' },
+                { label: 'Backlog aging', value: detail.backlogAgingScore, weight: '23 %' },
+                { label: 'Month closing', value: detail.monthClosingScore, weight: '15 %' },
+                { label: 'Data quality', value: detail.dataQualityScore, weight: '5 %' },
+                { label: 'Timeliness', value: detail.timelinessScore, weight: '15 %' }
               ] as const).map(({ label, value, weight }) => (
                 <div key={label} className="score-row">
                   <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
@@ -1388,6 +1435,59 @@ function OmegaCompanyDetailPage({
                   <span className="aging-label">{label}</span>
                 </div>
               ))}
+            </div>
+          </section>
+
+          <section className="detail-card">
+            <h2>Oneskorenie nahodenia dokladov <span className="muted-label">(posl. 90 dní)</span></h2>
+            <div className="late-entry-grid">
+              {([
+                { label: 'DF — Doručené faktúry', avg: detail.lateEntryDfAvgDays, max: detail.lateEntryDfMaxDays, count: detail.lateEntryDfCount },
+                { label: 'OF — Odoslané faktúry', avg: detail.lateEntryOfAvgDays, max: detail.lateEntryOfMaxDays, count: detail.lateEntryOfCount },
+                { label: 'PD — Pokladňa',         avg: detail.lateEntryPdAvgDays, max: detail.lateEntryPdMaxDays, count: detail.lateEntryPdCount }
+              ]).map(({ label, avg, max, count }) => {
+                const cls = avg === null ? 'ok' : avg > 30 ? 'critical' : avg > 14 ? 'bad' : 'ok';
+                return (
+                  <div key={label} className={`late-entry-row ${cls}`}>
+                    <span className="late-entry-label">{label}</span>
+                    {count === 0
+                      ? <span className="muted-label">žiadne doklady</span>
+                      : <>
+                          <span className="late-entry-avg">{avg ?? 0} dní <span className="muted-label">avg</span></span>
+                          <span className="late-entry-max muted-label">max {max ?? 0} dní</span>
+                          <span className="late-entry-count muted-label">{count} dokladov</span>
+                        </>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className="detail-card">
+            <h2>Oneskorenie zaúčtovania dokladov <span className="muted-label">(posl. 90 dní)</span></h2>
+            <div className="late-entry-grid">
+              {([
+                { label: 'DF — Doručené faktúry', avg: detail.postingLagDfAvgDays, max: detail.postingLagDfMaxDays, count: detail.postingLagDfCount },
+                { label: 'OF — Odoslané faktúry', avg: detail.postingLagOfAvgDays, max: detail.postingLagOfMaxDays, count: detail.postingLagOfCount },
+                { label: 'PD — Pokladňa',         avg: detail.postingLagPdAvgDays, max: detail.postingLagPdMaxDays, count: detail.postingLagPdCount },
+                { label: 'BV — Bankový výpis',    avg: detail.postingLagBvAvgDays, max: detail.postingLagBvMaxDays, count: detail.postingLagBvCount }
+              ]).map(({ label, avg, max, count }) => {
+                const cls = avg === null ? 'ok' : avg > 30 ? 'critical' : avg > 14 ? 'bad' : 'ok';
+                return (
+                  <div key={label} className={`late-entry-row ${cls}`}>
+                    <span className="late-entry-label">{label}</span>
+                    {count === 0
+                      ? <span className="muted-label">žiadne zaúčtované doklady</span>
+                      : <>
+                          <span className="late-entry-avg">{avg ?? 0} dní <span className="muted-label">avg</span></span>
+                          <span className="late-entry-max muted-label">max {max ?? 0} dní</span>
+                          <span className="late-entry-count muted-label">{count} dokladov</span>
+                        </>
+                    }
+                  </div>
+                );
+              })}
             </div>
           </section>
 
@@ -1495,12 +1595,12 @@ function scoreClass(score: number) {
 }
 
 function warningSeverity(warning: string) {
-  if (['OLD_UNPOSTED_30D', 'ZERO_POSTING', 'BROKEN_MONTH', 'UNKNOWN_CIRCUIT'].includes(warning)) {
+  if (['OLD_UNPOSTED_30D', 'ZERO_POSTING', 'BROKEN_MONTH', 'UNKNOWN_CIRCUIT', 'LATE_ENTRY_CRIT', 'POSTING_LAG_CRIT'].includes(warning)) {
     return 'critical';
   }
 
   if (['OLD_UNPOSTED_7D', 'ACTIVITY_DROP', 'IMPORT_ONLY', 'HIGH_STORNO_RATE',
-       'STUCK_PREACCOUNTED', 'ORPHAN_LINES', 'ORPHAN_PAYMENTS', 'NULL_DATE'].includes(warning)) {
+       'STUCK_PREACCOUNTED', 'ORPHAN_LINES', 'ORPHAN_PAYMENTS', 'NULL_DATE', 'LATE_ENTRY', 'POSTING_LAG'].includes(warning)) {
     return 'bad';
   }
 
@@ -1520,7 +1620,11 @@ function warningLabel(warning: string) {
     NULL_DATE: 'null date',
     ORPHAN_LINES: 'orphan lines',
     ORPHAN_PAYMENTS: 'orphan payments',
-    UNKNOWN_CIRCUIT: 'unknown circuit'
+    UNKNOWN_CIRCUIT: 'unknown circuit',
+    LATE_ENTRY: 'neskoré nahodenie',
+    LATE_ENTRY_CRIT: 'neskoré nahodenie!',
+    POSTING_LAG: 'pomalé zaúčtovanie',
+    POSTING_LAG_CRIT: 'pomalé zaúčtovanie!'
   };
 
   return labels[warning] ?? warning;
@@ -1566,7 +1670,11 @@ function warningTooltip(warning: string) {
     NULL_DATE: 'Existujú doklady s chýbajúcim dátumom zaevidovania',
     ORPHAN_LINES: 'Riadky dokladov bez zodpovedajúcej hlavičky — narušená integrita dát',
     ORPHAN_PAYMENTS: 'Platby/odpočty bez zodpovedajúcej hlavičky — narušená integrita dát',
-    UNKNOWN_CIRCUIT: 'Doklady s kódom okruhu, ktorý neexistuje v číselníku T025'
+    UNKNOWN_CIRCUIT: 'Doklady s kódom okruhu, ktorý neexistuje v číselníku T025',
+    LATE_ENTRY: 'Priemerné oneskorenie nahodenia dokladu >14 dní (dátum vystavenia vs. dátum zaevidovania)',
+    LATE_ENTRY_CRIT: 'Priemerné oneskorenie nahodenia dokladu >30 dní — doklady prichádzajú s výrazným oneskorením',
+    POSTING_LAG: 'Priemerné oneskorenie zaúčtovania >14 dní (dátum zaevidovania vs. dátum zaúčtovania)',
+    POSTING_LAG_CRIT: 'Priemerné oneskorenie zaúčtovania >30 dní — doklady nahodené, ale zaúčtovávané s veľkým oneskorením'
   };
   return tooltips[warning] ?? '';
 }

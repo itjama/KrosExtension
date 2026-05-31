@@ -58,7 +58,28 @@ internal static class OmegaDashboardSnapshotCalculator
             GetInt64(reader, "NullDateCount"),
             GetInt64(reader, "OrphanLineCount"),
             GetInt64(reader, "OrphanPaymentCount"),
-            GetInt64(reader, "UnknownCircuitCount"));
+            GetInt64(reader, "UnknownCircuitCount"),
+            GetNullableInt32(reader, "PostingLagDfAvgDays"),
+            GetNullableInt32(reader, "PostingLagDfMaxDays"),
+            GetInt64(reader, "PostingLagDfCount"),
+            GetNullableInt32(reader, "PostingLagOfAvgDays"),
+            GetNullableInt32(reader, "PostingLagOfMaxDays"),
+            GetInt64(reader, "PostingLagOfCount"),
+            GetNullableInt32(reader, "PostingLagPdAvgDays"),
+            GetNullableInt32(reader, "PostingLagPdMaxDays"),
+            GetInt64(reader, "PostingLagPdCount"),
+            GetNullableInt32(reader, "PostingLagBvAvgDays"),
+            GetNullableInt32(reader, "PostingLagBvMaxDays"),
+            GetInt64(reader, "PostingLagBvCount"),
+            GetNullableInt32(reader, "LateEntryDfAvgDays"),
+            GetNullableInt32(reader, "LateEntryDfMaxDays"),
+            GetInt64(reader, "LateEntryDfCount"),
+            GetNullableInt32(reader, "LateEntryOfAvgDays"),
+            GetNullableInt32(reader, "LateEntryOfMaxDays"),
+            GetInt64(reader, "LateEntryOfCount"),
+            GetNullableInt32(reader, "LateEntryPdAvgDays"),
+            GetNullableInt32(reader, "LateEntryPdMaxDays"),
+            GetInt64(reader, "LateEntryPdCount"));
 
         var scores = CalculateScores(metrics);
         var warnings = BuildWarnings(metrics);
@@ -78,6 +99,7 @@ internal static class OmegaDashboardSnapshotCalculator
             scores.BacklogAgingScore,
             scores.MonthClosingScore,
             scores.DataQualityScore,
+            scores.TimelinessScore,
             metrics.Activity7Days,
             metrics.Activity30Days,
             metrics.Previous7DaysActivity,
@@ -98,6 +120,27 @@ internal static class OmegaDashboardSnapshotCalculator
             metrics.StornoRate30Days,
             metrics.PreAccountedStuck,
             metrics.DataQualityIssues,
+            metrics.LateEntryDfAvgDays,
+            metrics.LateEntryDfMaxDays,
+            metrics.LateEntryDfCount,
+            metrics.LateEntryOfAvgDays,
+            metrics.LateEntryOfMaxDays,
+            metrics.LateEntryOfCount,
+            metrics.LateEntryPdAvgDays,
+            metrics.LateEntryPdMaxDays,
+            metrics.LateEntryPdCount,
+            metrics.PostingLagDfAvgDays,
+            metrics.PostingLagDfMaxDays,
+            metrics.PostingLagDfCount,
+            metrics.PostingLagOfAvgDays,
+            metrics.PostingLagOfMaxDays,
+            metrics.PostingLagOfCount,
+            metrics.PostingLagPdAvgDays,
+            metrics.PostingLagPdMaxDays,
+            metrics.PostingLagPdCount,
+            metrics.PostingLagBvAvgDays,
+            metrics.PostingLagBvMaxDays,
+            metrics.PostingLagBvCount,
             string.Join(',', warnings));
     }
 
@@ -149,18 +192,31 @@ internal static class OmegaDashboardSnapshotCalculator
             ? 100
             : Math.Max(0, 100 - (int)Math.Min(100, metrics.DataQualityIssues * 10));
 
+        var maxPostingLagAvg = new[] { metrics.PostingLagDfAvgDays, metrics.PostingLagOfAvgDays, metrics.PostingLagPdAvgDays, metrics.PostingLagBvAvgDays }
+            .Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Max();
+        var maxLateEntryAvg = new[] { metrics.LateEntryDfAvgDays, metrics.LateEntryOfAvgDays, metrics.LateEntryPdAvgDays }
+            .Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Max();
+        var timelinessInput = Math.Max(maxPostingLagAvg, maxLateEntryAvg);
+        var timelinessScore = timelinessInput <= 13
+            ? 100
+            : timelinessInput > 60
+                ? 0
+                : 100 - (int)Math.Round((timelinessInput - 13) * 100.0 / 47);
+
         activityScore = ClampScore(activityScore);
         completionScore = ClampScore(completionScore);
         backlogAgingScore = ClampScore(backlogAgingScore);
         monthClosingScore = ClampScore(monthClosingScore);
         dataQualityScore = ClampScore(dataQualityScore);
+        timelinessScore = ClampScore(timelinessScore);
 
         var healthScore = ClampScore((int)Math.Round(
-            activityScore * 0.20m +
-            completionScore * 0.30m +
-            backlogAgingScore * 0.25m +
-            monthClosingScore * 0.20m +
-            dataQualityScore * 0.05m));
+            activityScore     * 0.17m +
+            completionScore   * 0.25m +
+            backlogAgingScore * 0.23m +
+            monthClosingScore * 0.15m +
+            dataQualityScore  * 0.05m +
+            timelinessScore   * 0.15m));
 
         return new OmegaDashboardScores(
             healthScore,
@@ -168,7 +224,8 @@ internal static class OmegaDashboardSnapshotCalculator
             completionScore,
             backlogAgingScore,
             monthClosingScore,
-            dataQualityScore);
+            dataQualityScore,
+            timelinessScore);
     }
 
     private static IReadOnlyList<string> BuildWarnings(OmegaDashboardMetrics metrics)
@@ -210,6 +267,22 @@ internal static class OmegaDashboardSnapshotCalculator
 
         if (metrics.UnknownCircuitCount > 0)
             warnings.Add("UNKNOWN_CIRCUIT");
+
+        var maxPostingLagAvg = new[] { metrics.PostingLagDfAvgDays, metrics.PostingLagOfAvgDays, metrics.PostingLagPdAvgDays, metrics.PostingLagBvAvgDays }
+            .Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Max();
+
+        if (maxPostingLagAvg > 30)
+            warnings.Add("POSTING_LAG_CRIT");
+        else if (maxPostingLagAvg > 14)
+            warnings.Add("POSTING_LAG");
+
+        var maxLateEntryAvg = new[] { metrics.LateEntryDfAvgDays, metrics.LateEntryOfAvgDays, metrics.LateEntryPdAvgDays }
+            .Where(x => x.HasValue).Select(x => x!.Value).DefaultIfEmpty(0).Max();
+
+        if (maxLateEntryAvg > 30)
+            warnings.Add("LATE_ENTRY_CRIT");
+        else if (maxLateEntryAvg > 14)
+            warnings.Add("LATE_ENTRY");
 
         return warnings;
     }
@@ -280,7 +353,28 @@ internal static class OmegaDashboardSnapshotCalculator
         long NullDateCount,
         long OrphanLineCount,
         long OrphanPaymentCount,
-        long UnknownCircuitCount)
+        long UnknownCircuitCount,
+        int? PostingLagDfAvgDays,
+        int? PostingLagDfMaxDays,
+        long PostingLagDfCount,
+        int? PostingLagOfAvgDays,
+        int? PostingLagOfMaxDays,
+        long PostingLagOfCount,
+        int? PostingLagPdAvgDays,
+        int? PostingLagPdMaxDays,
+        long PostingLagPdCount,
+        int? PostingLagBvAvgDays,
+        int? PostingLagBvMaxDays,
+        long PostingLagBvCount,
+        int? LateEntryDfAvgDays,
+        int? LateEntryDfMaxDays,
+        long LateEntryDfCount,
+        int? LateEntryOfAvgDays,
+        int? LateEntryOfMaxDays,
+        long LateEntryOfCount,
+        int? LateEntryPdAvgDays,
+        int? LateEntryPdMaxDays,
+        long LateEntryPdCount)
     {
         public long DataQualityIssues =>
             NullDateCount + OrphanLineCount + OrphanPaymentCount + UnknownCircuitCount;
@@ -295,11 +389,13 @@ internal static class OmegaDashboardSnapshotCalculator
         int CompletionScore,
         int BacklogAgingScore,
         int MonthClosingScore,
-        int DataQualityScore);
+        int DataQualityScore,
+        int TimelinessScore);
 
     private const string SnapshotSql = """
         DECLARE @From7 date = DATEADD(day, -6, @Today);
         DECLARE @From30 date = DATEADD(day, -29, @Today);
+        DECLARE @From90 date = DATEADD(day, -89, @Today);
         DECLARE @Previous7From date = DATEADD(day, -13, @Today);
         DECLARE @Previous7To date = DATEADD(day, -7, @Today);
         DECLARE @CurrentMonthStart date = DATEFROMPARTS(YEAR(@Today), MONTH(@Today), 1);
@@ -368,6 +464,60 @@ internal static class OmegaDashboardSnapshotCalculator
             WHERE IsPreAccounted = 1
               AND IsPosted = 0
         ),
+        posting_lag AS (
+            SELECT
+                AVG(CASE WHEN DocumentCode = 'DF' AND PostingLagDays BETWEEN 0 AND 3650 THEN PostingLagDays END) AS PostingLagDfAvgDays,
+                MAX(CASE WHEN DocumentCode = 'DF' AND PostingLagDays >= 0 THEN PostingLagDays END) AS PostingLagDfMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'DF' AND PostingLagDays >= 0 THEN 1 END) AS PostingLagDfCount,
+                AVG(CASE WHEN DocumentCode = 'OF' AND PostingLagDays BETWEEN 0 AND 3650 THEN PostingLagDays END) AS PostingLagOfAvgDays,
+                MAX(CASE WHEN DocumentCode = 'OF' AND PostingLagDays >= 0 THEN PostingLagDays END) AS PostingLagOfMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'OF' AND PostingLagDays >= 0 THEN 1 END) AS PostingLagOfCount,
+                AVG(CASE WHEN DocumentCode = 'PD' AND PostingLagDays BETWEEN 0 AND 3650 THEN PostingLagDays END) AS PostingLagPdAvgDays,
+                MAX(CASE WHEN DocumentCode = 'PD' AND PostingLagDays >= 0 THEN PostingLagDays END) AS PostingLagPdMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'PD' AND PostingLagDays >= 0 THEN 1 END) AS PostingLagPdCount,
+                AVG(CASE WHEN DocumentCode = 'BV' AND PostingLagDays BETWEEN 0 AND 3650 THEN PostingLagDays END) AS PostingLagBvAvgDays,
+                MAX(CASE WHEN DocumentCode = 'BV' AND PostingLagDays >= 0 THEN PostingLagDays END) AS PostingLagBvMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'BV' AND PostingLagDays >= 0 THEN 1 END) AS PostingLagBvCount
+            FROM (
+                SELECT
+                    e.C023_CisloInterneKodOkruh AS DocumentCode,
+                    DATEDIFF(day,
+                        TRY_CONVERT(date, CONCAT(e.C116_RokZaevidovania, '-', e.C115_MesZaevidovania, '-', e.C114_DenZaevidovania)),
+                        TRY_CONVERT(date, CONCAT(e.C119_RokPoslednejOpravy, '-', e.C118_MesPoslednejOpravy, '-', e.C117_DenPoslednejOpravy))
+                    ) AS PostingLagDays
+                FROM dbo.T040_EUD AS e
+                WHERE ISNULL(e.C001_Vymazany, 0) = 0
+                  AND e.C023_CisloInterneKodOkruh IN ('DF', 'OF', 'PD', 'BV')
+                  AND NULLIF(LTRIM(RTRIM(e.C027_KodZauctoval)), '') IS NOT NULL
+                  AND TRY_CONVERT(date, CONCAT(e.C119_RokPoslednejOpravy, '-', e.C118_MesPoslednejOpravy, '-', e.C117_DenPoslednejOpravy))
+                      BETWEEN @From90 AND @Today
+            ) AS src
+        ),
+        late_entry AS (
+            SELECT
+                AVG(CASE WHEN DocumentCode = 'DF' AND LateEntryDays BETWEEN 0 AND 3650 THEN LateEntryDays END) AS LateEntryDfAvgDays,
+                MAX(CASE WHEN DocumentCode = 'DF' AND LateEntryDays >= 0 THEN LateEntryDays END) AS LateEntryDfMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'DF' AND LateEntryDays >= 0 THEN 1 END) AS LateEntryDfCount,
+                AVG(CASE WHEN DocumentCode = 'OF' AND LateEntryDays BETWEEN 0 AND 3650 THEN LateEntryDays END) AS LateEntryOfAvgDays,
+                MAX(CASE WHEN DocumentCode = 'OF' AND LateEntryDays >= 0 THEN LateEntryDays END) AS LateEntryOfMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'OF' AND LateEntryDays >= 0 THEN 1 END) AS LateEntryOfCount,
+                AVG(CASE WHEN DocumentCode = 'PD' AND LateEntryDays BETWEEN 0 AND 3650 THEN LateEntryDays END) AS LateEntryPdAvgDays,
+                MAX(CASE WHEN DocumentCode = 'PD' AND LateEntryDays >= 0 THEN LateEntryDays END) AS LateEntryPdMaxDays,
+                COUNT(CASE WHEN DocumentCode = 'PD' AND LateEntryDays >= 0 THEN 1 END) AS LateEntryPdCount
+            FROM (
+                SELECT
+                    e.C023_CisloInterneKodOkruh AS DocumentCode,
+                    DATEDIFF(day,
+                        TRY_CONVERT(date, CONCAT(e.C062_RokVystavenia, '-', e.C061_MesVystavenia, '-', e.C060_DenVystavenia)),
+                        TRY_CONVERT(date, CONCAT(e.C116_RokZaevidovania, '-', e.C115_MesZaevidovania, '-', e.C114_DenZaevidovania))
+                    ) AS LateEntryDays
+                FROM dbo.T040_EUD AS e
+                WHERE ISNULL(e.C001_Vymazany, 0) = 0
+                  AND e.C023_CisloInterneKodOkruh IN ('DF', 'OF', 'PD')
+                  AND TRY_CONVERT(date, CONCAT(e.C116_RokZaevidovania, '-', e.C115_MesZaevidovania, '-', e.C114_DenZaevidovania))
+                      BETWEEN @From90 AND @Today
+            ) AS src
+        ),
         data_quality AS (
             SELECT
                 (
@@ -421,12 +571,35 @@ internal static class OmegaDashboardSnapshotCalculator
                data_quality.NullDateCount,
                data_quality.OrphanLineCount,
                data_quality.OrphanPaymentCount,
-               data_quality.UnknownCircuitCount
+               data_quality.UnknownCircuitCount,
+               posting_lag.PostingLagDfAvgDays,
+               posting_lag.PostingLagDfMaxDays,
+               posting_lag.PostingLagDfCount,
+               posting_lag.PostingLagOfAvgDays,
+               posting_lag.PostingLagOfMaxDays,
+               posting_lag.PostingLagOfCount,
+               posting_lag.PostingLagPdAvgDays,
+               posting_lag.PostingLagPdMaxDays,
+               posting_lag.PostingLagPdCount,
+               posting_lag.PostingLagBvAvgDays,
+               posting_lag.PostingLagBvMaxDays,
+               posting_lag.PostingLagBvCount,
+               late_entry.LateEntryDfAvgDays,
+               late_entry.LateEntryDfMaxDays,
+               late_entry.LateEntryDfCount,
+               late_entry.LateEntryOfAvgDays,
+               late_entry.LateEntryOfMaxDays,
+               late_entry.LateEntryOfCount,
+               late_entry.LateEntryPdAvgDays,
+               late_entry.LateEntryPdMaxDays,
+               late_entry.LateEntryPdCount
         FROM daily
         CROSS JOIN previous_month
         CROSS JOIN historical_months
         CROSS JOIN storno
         CROSS JOIN preaccounted_stuck
         CROSS JOIN data_quality
+        CROSS JOIN posting_lag
+        CROSS JOIN late_entry
         """;
 }

@@ -66,6 +66,7 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
             snapshot.BacklogAgingScore,
             snapshot.MonthClosingScore,
             snapshot.DataQualityScore,
+            snapshot.TimelinessScore,
             funnel.Registered30d,
             funnel.PreAccounted30d,
             funnel.Posted30d,
@@ -78,7 +79,28 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
             funnel.Bucket8to30d,
             funnel.Bucket30dPlus,
             monthly,
-            warnings);
+            warnings,
+            snapshot.PostingLagDfAvgDays,
+            snapshot.PostingLagDfMaxDays,
+            snapshot.PostingLagDfCount,
+            snapshot.PostingLagOfAvgDays,
+            snapshot.PostingLagOfMaxDays,
+            snapshot.PostingLagOfCount,
+            snapshot.PostingLagPdAvgDays,
+            snapshot.PostingLagPdMaxDays,
+            snapshot.PostingLagPdCount,
+            snapshot.PostingLagBvAvgDays,
+            snapshot.PostingLagBvMaxDays,
+            snapshot.PostingLagBvCount,
+            snapshot.LateEntryDfAvgDays,
+            snapshot.LateEntryDfMaxDays,
+            snapshot.LateEntryDfCount,
+            snapshot.LateEntryOfAvgDays,
+            snapshot.LateEntryOfMaxDays,
+            snapshot.LateEntryOfCount,
+            snapshot.LateEntryPdAvgDays,
+            snapshot.LateEntryPdMaxDays,
+            snapshot.LateEntryPdCount);
     }
 
     private static async Task<FunnelMetrics> ReadFunnelAsync(

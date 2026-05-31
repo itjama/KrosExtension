@@ -6,4 +6,19 @@
   <ItemGroup>
     <Content Include="ClientApp\dist\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <ItemGroup>
+    <ClientAppSources Include="ClientApp\src\**" />
+    <ClientAppSources Include="ClientApp\index.html" />
+    <ClientAppSources Include="ClientApp\vite.config.*" />
+    <ClientAppSources Include="ClientApp\tsconfig*.json" />
+    <ClientAppSources Include="ClientApp\package.json" />
+  </ItemGroup>
+
+  <Target Name="NpmBuildFrontend" BeforeTargets="Build"
+          Inputs="@(ClientAppSources)"
+          Outputs="ClientApp\dist\index.html">
+    <Message Text="Building frontend (npm run build)..." Importance="high" />
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildThisFileDirectory)ClientApp" />
+  </Target>
 </Project>

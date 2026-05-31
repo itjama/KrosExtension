@@ -77,20 +77,28 @@ static async Task ProxyToApiAsync(HttpContext context, IHttpClientFactory httpCl
     }
 
     var client = httpClientFactory.CreateClient("Api");
-    using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
 
-    context.Response.StatusCode = (int)response.StatusCode;
-
-    foreach (var header in response.Headers)
+    try
     {
-        context.Response.Headers[header.Key] = header.Value.ToArray();
-    }
+        using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, context.RequestAborted);
 
-    foreach (var header in response.Content.Headers)
+        context.Response.StatusCode = (int)response.StatusCode;
+
+        foreach (var header in response.Headers)
+        {
+            context.Response.Headers[header.Key] = header.Value.ToArray();
+        }
+
+        foreach (var header in response.Content.Headers)
+        {
+            context.Response.Headers[header.Key] = header.Value.ToArray();
+        }
+
+        context.Response.Headers.Remove("transfer-encoding");
+        await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
+    }
+    catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
     {
-        context.Response.Headers[header.Key] = header.Value.ToArray();
+        // Client disconnected — expected, not an error.
     }
-
-    context.Response.Headers.Remove("transfer-encoding");
-    await response.Content.CopyToAsync(context.Response.Body, context.RequestAborted);
 }

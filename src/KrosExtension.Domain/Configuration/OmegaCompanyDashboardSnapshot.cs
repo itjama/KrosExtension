@@ -21,6 +21,7 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
         int backlogAgingScore,
         int monthClosingScore,
         int dataQualityScore,
+        int timelinessScore,
         long activity7Days,
         long activity30Days,
         long previous7DaysActivity,
@@ -41,6 +42,27 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
         decimal? stornoRate30Days,
         long preAccountedStuck,
         long dataQualityIssues,
+        int? lateEntryDfAvgDays,
+        int? lateEntryDfMaxDays,
+        long lateEntryDfCount,
+        int? lateEntryOfAvgDays,
+        int? lateEntryOfMaxDays,
+        long lateEntryOfCount,
+        int? lateEntryPdAvgDays,
+        int? lateEntryPdMaxDays,
+        long lateEntryPdCount,
+        int? postingLagDfAvgDays,
+        int? postingLagDfMaxDays,
+        long postingLagDfCount,
+        int? postingLagOfAvgDays,
+        int? postingLagOfMaxDays,
+        long postingLagOfCount,
+        int? postingLagPdAvgDays,
+        int? postingLagPdMaxDays,
+        long postingLagPdCount,
+        int? postingLagBvAvgDays,
+        int? postingLagBvMaxDays,
+        long postingLagBvCount,
         string warningFlags)
     {
         DataReadServerId = dataReadServerId;
@@ -55,6 +77,7 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
         BacklogAgingScore = backlogAgingScore;
         MonthClosingScore = monthClosingScore;
         DataQualityScore = dataQualityScore;
+        TimelinessScore = timelinessScore;
         Activity7Days = activity7Days;
         Activity30Days = activity30Days;
         Previous7DaysActivity = previous7DaysActivity;
@@ -75,6 +98,27 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
         StornoRate30Days = stornoRate30Days;
         PreAccountedStuck = preAccountedStuck;
         DataQualityIssues = dataQualityIssues;
+        LateEntryDfAvgDays = lateEntryDfAvgDays;
+        LateEntryDfMaxDays = lateEntryDfMaxDays;
+        LateEntryDfCount = lateEntryDfCount;
+        LateEntryOfAvgDays = lateEntryOfAvgDays;
+        LateEntryOfMaxDays = lateEntryOfMaxDays;
+        LateEntryOfCount = lateEntryOfCount;
+        LateEntryPdAvgDays = lateEntryPdAvgDays;
+        LateEntryPdMaxDays = lateEntryPdMaxDays;
+        LateEntryPdCount = lateEntryPdCount;
+        PostingLagDfAvgDays = postingLagDfAvgDays;
+        PostingLagDfMaxDays = postingLagDfMaxDays;
+        PostingLagDfCount = postingLagDfCount;
+        PostingLagOfAvgDays = postingLagOfAvgDays;
+        PostingLagOfMaxDays = postingLagOfMaxDays;
+        PostingLagOfCount = postingLagOfCount;
+        PostingLagPdAvgDays = postingLagPdAvgDays;
+        PostingLagPdMaxDays = postingLagPdMaxDays;
+        PostingLagPdCount = postingLagPdCount;
+        PostingLagBvAvgDays = postingLagBvAvgDays;
+        PostingLagBvMaxDays = postingLagBvMaxDays;
+        PostingLagBvCount = postingLagBvCount;
         WarningFlags = warningFlags;
     }
 
@@ -101,6 +145,8 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
     public int MonthClosingScore { get; private set; }
 
     public int DataQualityScore { get; private set; }
+
+    public int TimelinessScore { get; private set; }
 
     public long Activity7Days { get; private set; }
 
@@ -141,6 +187,48 @@ public sealed class OmegaCompanyDashboardSnapshot : Entity
     public long PreAccountedStuck { get; private set; }
 
     public long DataQualityIssues { get; private set; }
+
+    public int? LateEntryDfAvgDays { get; private set; }
+
+    public int? LateEntryDfMaxDays { get; private set; }
+
+    public long LateEntryDfCount { get; private set; }
+
+    public int? LateEntryOfAvgDays { get; private set; }
+
+    public int? LateEntryOfMaxDays { get; private set; }
+
+    public long LateEntryOfCount { get; private set; }
+
+    public int? LateEntryPdAvgDays { get; private set; }
+
+    public int? LateEntryPdMaxDays { get; private set; }
+
+    public long LateEntryPdCount { get; private set; }
+
+    public int? PostingLagDfAvgDays { get; private set; }
+
+    public int? PostingLagDfMaxDays { get; private set; }
+
+    public long PostingLagDfCount { get; private set; }
+
+    public int? PostingLagOfAvgDays { get; private set; }
+
+    public int? PostingLagOfMaxDays { get; private set; }
+
+    public long PostingLagOfCount { get; private set; }
+
+    public int? PostingLagPdAvgDays { get; private set; }
+
+    public int? PostingLagPdMaxDays { get; private set; }
+
+    public long PostingLagPdCount { get; private set; }
+
+    public int? PostingLagBvAvgDays { get; private set; }
+
+    public int? PostingLagBvMaxDays { get; private set; }
+
+    public long PostingLagBvCount { get; private set; }
 
     public string WarningFlags { get; private set; } = string.Empty;
 }
