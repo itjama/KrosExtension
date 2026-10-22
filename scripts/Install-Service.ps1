@@ -27,6 +27,23 @@
     Path to the dist\ folder produced by Build-Dist.ps1.
     Default: ..\dist relative to this script.
 
+.PARAMETER HostName
+    DNS name users will open in the browser. Default: computer name.
+
+.PARAMETER CertificatePath
+    Path to a PFX file used by the Web HTTPS endpoint (with -CertificatePassword).
+
+.PARAMETER CertificatePassword
+    Password of the PFX file.
+
+.PARAMETER CertificateSubject
+    Subject of a certificate in LocalMachine\My used by the Web HTTPS endpoint
+    (alternative to -CertificatePath).
+
+.PARAMETER BootstrapAdminPassword
+    Initial password of the 'admin' account. Written to api\appsettings.Production.json
+    only when that file does not exist yet.
+
 .EXAMPLE
     .\Install-Service.ps1
     .\Install-Service.ps1 -SqlServer "MYSERVER" -InstallDir "D:\Services\KrosExtension"
@@ -36,7 +53,12 @@ param(
     [string]$InstallDir = 'C:\KrosExtension',
     [string]$SqlServer  = '.\SQLEXPRESS',
     [string]$Database   = 'KrosExtension',
-    [string]$SourceDir  = ''
+    [string]$SourceDir  = '',
+    [string]$HostName   = $env:COMPUTERNAME,
+    [string]$CertificatePath = '',
+    [string]$CertificatePassword = '',
+    [string]$CertificateSubject = '',
+    [string]$BootstrapAdminPassword = ''
 )
 
 Set-StrictMode -Version Latest
@@ -93,6 +115,40 @@ if (-not (Test-Path $InstallDir)) { New-Item -ItemType Directory -Path $InstallD
 Copy-Item -Path $apiSrc -Destination $apiDest -Recurse -Force
 Copy-Item -Path $webSrc -Destination $webDest -Recurse -Force
 
+# ── Production config (created only when missing, never overwritten) ─────────
+$webProd = Join-Path $webDest 'appsettings.Production.json'
+if (-not (Test-Path $webProd)) {
+    $cert = $null
+    if ($CertificatePath) {
+        $cert = [ordered]@{ Path = $CertificatePath; Password = $CertificatePassword }
+    } elseif ($CertificateSubject) {
+        $cert = [ordered]@{ Subject = $CertificateSubject; Store = 'My'; Location = 'LocalMachine' }
+    }
+    $https = [ordered]@{ Url = 'https://0.0.0.0:5284' }
+    if ($cert) {
+        $https.Certificate = $cert
+    } else {
+        Write-Warning "No certificate given (-CertificatePath / -CertificateSubject). HTTPS will not start until $webProd is completed."
+    }
+    $webCfg = [ordered]@{ Kestrel = [ordered]@{ Endpoints = [ordered]@{ Https = $https } } }
+    $webCfg | ConvertTo-Json -Depth 10 | Set-Content $webProd -Encoding utf8
+    Write-Host "    Created $webProd"
+} else {
+    Write-Host "    Keeping existing $webProd"
+}
+
+$apiProd = Join-Path $apiDest 'appsettings.Production.json'
+if (-not (Test-Path $apiProd)) {
+    if (-not $BootstrapAdminPassword) {
+        Write-Warning "No -BootstrapAdminPassword given. Set Bootstrap:AdminPassword in $apiProd before the first login."
+    }
+    $apiCfg = [ordered]@{ Bootstrap = [ordered]@{ AdminUserName = 'admin'; AdminPassword = $BootstrapAdminPassword } }
+    $apiCfg | ConvertTo-Json -Depth 10 | Set-Content $apiProd -Encoding utf8
+    Write-Host "    Created $apiProd"
+} else {
+    Write-Host "    Keeping existing $apiProd"
+}
+
 # ── Patch API appsettings.json ────────────────────────────────────────────────
 Write-Host "[2/4] Configuring connection string..." -ForegroundColor Yellow
 $apiSettings = Join-Path $apiDest 'appsettings.json'
@@ -139,7 +195,7 @@ Write-Host "=== Installation complete ===" -ForegroundColor Green
 Write-Host "$apiName : $apiStatus"
 Write-Host "$webName : $webStatus"
 Write-Host ""
-Write-Host "Web UI: http://localhost:5284" -ForegroundColor Cyan
+Write-Host "Web UI: https://${HostName}:5284" -ForegroundColor Cyan
 Write-Host ""
 if ($apiStatus -ne 'Running' -or $webStatus -ne 'Running') {
     Write-Warning "One or more services did not start. Check Event Viewer > Windows Logs > Application."

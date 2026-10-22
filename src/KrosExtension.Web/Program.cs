@@ -16,6 +16,11 @@ builder.Services.AddHttpClient("Api", client =>
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
 var apiMethods = new[] { "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS" };
 app.MapMethods("/api/{**path}", apiMethods, ProxyToApiAsync);
 app.MapMethods("/health", apiMethods, ProxyToApiAsync);
@@ -55,7 +60,10 @@ static async Task ProxyToApiAsync(HttpContext context, IHttpClientFactory httpCl
 
     foreach (var header in context.Request.Headers)
     {
-        if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(header.Key, "Host", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(header.Key, "X-Forwarded-For", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(header.Key, "X-Forwarded-Proto", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(header.Key, "X-Forwarded-Host", StringComparison.OrdinalIgnoreCase))
         {
             continue;
         }
@@ -65,6 +73,12 @@ static async Task ProxyToApiAsync(HttpContext context, IHttpClientFactory httpCl
             request.Content ??= new StreamContent(context.Request.Body);
             request.Content.Headers.TryAddWithoutValidation(header.Key, header.Value.ToArray());
         }
+    }
+
+    // Overwrite any client-supplied value so the Api sees the real client address.
+    if (context.Connection.RemoteIpAddress is { } remoteIp)
+    {
+        request.Headers.TryAddWithoutValidation("X-Forwarded-For", remoteIp.ToString());
     }
 
     if (context.Request.ContentLength > 0 && request.Content is null)

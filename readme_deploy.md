@@ -99,10 +99,9 @@ Spusti **na PC kde beží aplikácia** ako Administrátor:
 
 ```powershell
 netsh advfirewall firewall add rule name="KrosExtension Web" dir=in action=allow protocol=TCP localport=5284
-netsh advfirewall firewall add rule name="KrosExtension API" dir=in action=allow protocol=TCP localport=5184
 ```
 
-> Port 5184 (API) stačí otvoriť len ak chceš Swagger (`/swagger`) prístupný z iných PC. Pre bežné používanie stačí port 5284.
+> Port 5184 (API) **neotváraj** — API počúva len na localhost. Podrobnosti v sekcii 7.
 
 ### Overenie dostupnosti portu
 
@@ -120,7 +119,7 @@ Test-NetConnection -ComputerName 192.168.1.x -Port 5284
 Po otvorení firewallu je aplikácia dostupná na:
 
 ```
-http://<IP-adresa-servera>:5284
+https://<DNS-meno-servera>:5284
 ```
 
 IP adresu servera zistíš príkazom `ipconfig` (hľadaj `IPv4 Address`).
@@ -148,3 +147,58 @@ Get-EventLog -LogName Application -Source "Kros Extension*" -Newest 20
 1. Spusti `Build-Dist.ps1` na vývojárskom PC
 2. Skopíruj nový `dist\` na cieľový PC
 3. Spusti `Install-Service.ps1` znovu — automaticky zastaví staré služby, nasadí nové a spustí ich
+
+---
+
+## 7. Prihlásenie a HTTPS
+
+Web UI beží **iba cez HTTPS** na porte 5284 (HTTP listener neexistuje). API počúva len na `http://localhost:5184`.
+
+### Inštalácia s HTTPS
+
+```powershell
+# Certifikát zo súboru PFX
+.\Install-Service.ps1 -HostName ledgerpulse.firma.local -CertificatePath C:\certs\lp.pfx -CertificatePassword "heslo" -BootstrapAdminPassword "PrvotneHeslo123"
+
+# Certifikát z úložiska Windows (LocalMachine\My)
+.\Install-Service.ps1 -HostName ledgerpulse.firma.local -CertificateSubject "ledgerpulse.firma.local" -BootstrapAdminPassword "PrvotneHeslo123"
+```
+
+Skript vytvorí `C:\KrosExtension\web\appsettings.Production.json` a `C:\KrosExtension\api\appsettings.Production.json` **len ak neexistujú** — existujúce súbory nikdy neprepíše.
+
+### DNS
+
+Na internom DNS serveri vytvor záznam (A / CNAME) napr. `ledgerpulse.firma.local` smerujúci na server. Používatelia otvoria `https://ledgerpulse.firma.local:5284`.
+
+### Firewall
+
+- Port **5284** povoľ len z LAN (`-RemoteAddress LocalSubnet` alebo konkrétny rozsah).
+- Port **5184** (API) **nikdy neotváraj** — API je dostupné iba z localhost.
+
+```powershell
+New-NetFirewallRule -DisplayName "KrosExtension Web (HTTPS)" -Direction Inbound -Protocol TCP -LocalPort 5284 -RemoteAddress LocalSubnet -Action Allow
+```
+
+### Certifikát
+
+- **Firemná CA** — vyžiadaj certifikát pre DNS meno servera a nainštaluj ho do `LocalMachine\My` (alebo exportuj ako PFX).
+- **Self-signed:**
+
+```powershell
+New-SelfSignedCertificate -DnsName ledgerpulse.firma.local -CertStoreLocation Cert:\LocalMachine\My
+```
+
+  Verejnú časť (`.cer`) exportuj a na klientskych PC ju importuj do `Trusted Root Certification Authorities` (napr. cez GPO), inak bude prehliadač hlásiť varovanie.
+
+### Prvé prihlásenie
+
+1. Prihlás sa ako `admin` s heslom z `-BootstrapAdminPassword`. Aplikácia ťa vyzve na zmenu hesla.
+2. Po zmene hesla **vymaž hodnotu `AdminPassword`** v `C:\KrosExtension\api\appsettings.Production.json` (nechaj prázdny reťazec) a reštartuj `KrosExtensionApi`.
+
+### Núdzová obnova admina
+
+Ak admin zabudol heslo alebo je zablokovaný: zablokuj/odstráň admin účet v databáze `KrosExtension` (tabuľka používateľov), nastav `Bootstrap:AdminPassword` v `api\appsettings.Production.json` a reštartuj `KrosExtensionApi` — admin sa vytvorí znova s týmto heslom.
+
+### Záloha kľúčov
+
+**Zálohuj adresár `C:\ProgramData\KrosExtension\keys`.** Bez neho sa stratia prihlásené relácie (menší problém) a nebude možné dešifrovať uložené SQL heslá. Pri migrácii na nový server ho skopíruj spolu s databázou.
