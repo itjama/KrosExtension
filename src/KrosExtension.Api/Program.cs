@@ -53,6 +53,7 @@ app.UseAppAuthentication();
 
 app.MapHealthChecks("/health").AllowAnonymous();
 app.MapAuthEndpoints();
+app.MapAdminUserEndpoints();
 app.MapDatabaseEndpoints();
 app.MapDataReadServerEndpoints();
 app.MapCompanyEndpoints();
