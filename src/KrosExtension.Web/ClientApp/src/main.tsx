@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
-import { BarChart3, ChevronDown, Database, RefreshCw, Save, Server, Settings, Trash2 } from 'lucide-react';
+import { BarChart3, ChevronDown, Database, LogOut, RefreshCw, Save, Server, Settings, Trash2, Users } from 'lucide-react';
+import { apiFetch } from './api';
+import { AuthGate, ChangePasswordForm, type CurrentUser } from './auth';
 import './styles.css';
 
 type Product = 'olymp' | 'omega';
 type AuthenticationMode = 'Windows' | 'SqlLogin';
-type Section = 'stats-olymp' | 'stats-omega' | 'settings-servers' | 'settings-olymp' | 'settings-omega';
+type Section = 'stats-olymp' | 'stats-omega' | 'settings-servers' | 'settings-olymp' | 'settings-omega' | 'admin-users';
 
 type DashboardFilterState = {
   nameQuery: string;
@@ -293,9 +295,12 @@ function HelpModal({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-function App() {
+function App({ user, onLogout }: { user: CurrentUser; onLogout: () => Promise<void> }) {
   const [section, setSection] = useState<Section>('stats-omega');
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const isAdmin = user.role === 'Admin';
   const [omegaDetail, setOmegaDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
   const [olympDetail, setOlympDetail] = useState<{ dataReadServerId: string; databaseName: string } | null>(null);
 
@@ -309,6 +314,7 @@ function App() {
         <button className={section === 'stats-omega' ? 'active' : ''} onClick={() => { setSection('stats-omega'); setOmegaDetail(null); }}>
           <BarChart3 size={18} /> Omega
         </button>
+        {isAdmin && (<>
         <button className="submenu-toggle" onClick={() => setSettingsOpen((current) => !current)}>
           <Settings size={18} /> Settings <ChevronDown className={settingsOpen ? 'chevron open' : 'chevron'} size={16} />
         </button>
@@ -325,12 +331,42 @@ function App() {
             </button>
           </div>
         )}
+        <button className="submenu-toggle" onClick={() => setAdminOpen((current) => !current)}>
+          <Users size={18} /> Admin <ChevronDown className={adminOpen ? 'chevron open' : 'chevron'} size={16} />
+        </button>
+        {adminOpen && (
+          <div className="submenu">
+            <button className={section === 'admin-users' ? 'active' : ''} onClick={() => setSection('admin-users')}>
+              <Users size={16} /> Používatelia
+            </button>
+          </div>
+        )}
+        </>)}
+        <div className="sidebar-user">
+          <div className="sidebar-user-name">{user.userName}</div>
+          <button onClick={() => setChangePasswordOpen(true)}>Zmeniť heslo</button>
+          <button onClick={() => void onLogout()}><LogOut size={16} /> Odhlásiť</button>
+        </div>
         <div className="sidebar-copyright">© Iteo, s.r.o. 2026</div>
       </aside>
+      {changePasswordOpen && (
+        <div className="help-overlay">
+          <div className="help-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="help-modal-header">
+              <span>Zmena hesla</span>
+              <button className="help-close" onClick={() => setChangePasswordOpen(false)}>✕</button>
+            </div>
+            <div className="help-modal-body">
+              <ChangePasswordForm onDone={() => setChangePasswordOpen(false)} onCancel={() => setChangePasswordOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
       <section className="workspace">
-        {section === 'settings-servers' && <ServersPage />}
-        {section === 'settings-olymp' && <CompaniesPage product="olymp" />}
-        {section === 'settings-omega' && <CompaniesPage product="omega" />}
+        {isAdmin && section === 'admin-users' && <p>Správa používateľov bude doplnená.</p>}
+        {isAdmin && section === 'settings-servers' && <ServersPage />}
+        {isAdmin && section === 'settings-olymp' && <CompaniesPage product="olymp" />}
+        {isAdmin && section === 'settings-omega' && <CompaniesPage product="omega" />}
         {section === 'stats-olymp' && (olympDetail
           ? <OlympCompanyDetailPage
               dataReadServerId={olympDetail.dataReadServerId}
@@ -371,7 +407,7 @@ function ServersPage() {
 
   async function load() {
     setError('');
-    const response = await fetch('/api/data-read-servers');
+    const response = await apiFetch('/api/data-read-servers');
 
     if (!response.ok) {
       setError(await response.text());
@@ -383,7 +419,7 @@ function ServersPage() {
 
   async function addServer() {
     setError('');
-    const response = await fetch('/api/data-read-servers', {
+    const response = await apiFetch('/api/data-read-servers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -412,7 +448,7 @@ function ServersPage() {
   }
 
   async function removeServer(id: string) {
-    await fetch(`/api/data-read-servers/${id}`, { method: 'DELETE' });
+    await apiFetch(`/api/data-read-servers/${id}`, { method: 'DELETE' });
     await load();
   }
 
@@ -564,7 +600,7 @@ function CompaniesPage({ product }: { product: Product }) {
   const [status, setStatus] = useState('');
 
   async function loadRefreshSettings() {
-    const response = await fetch(`/api/${product}/refresh-settings`);
+    const response = await apiFetch(`/api/${product}/refresh-settings`);
 
     if (!response.ok) {
       setError(await response.text());
@@ -579,7 +615,7 @@ function CompaniesPage({ product }: { product: Product }) {
     setError('');
     setStatus('');
 
-    const response = await fetch(`/api/${product}/refresh-settings`, {
+    const response = await apiFetch(`/api/${product}/refresh-settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshTime })
@@ -599,7 +635,7 @@ function CompaniesPage({ product }: { product: Product }) {
     setStatus('');
 
     try {
-      const response = await fetch(`/api/${product}/companies/discover`);
+      const response = await apiFetch(`/api/${product}/companies/discover`);
 
       if (!response.ok) {
         setError(await response.text());
@@ -620,7 +656,7 @@ function CompaniesPage({ product }: { product: Product }) {
 
   async function saveSelection() {
     setError('');
-    const response = await fetch(`/api/${product}/companies/tracked`, {
+    const response = await apiFetch(`/api/${product}/companies/tracked`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -742,7 +778,7 @@ function StatisticsPage({ product }: { product: Product }) {
     setError('');
 
     try {
-      const response = await fetch(`/api/${product}/companies/statistics`);
+      const response = await apiFetch(`/api/${product}/companies/statistics`);
 
       if (!response.ok) {
         setError(await response.text());
@@ -824,7 +860,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
     setError('');
 
     try {
-      const response = await fetch('/api/omega/dashboard/companies');
+      const response = await apiFetch('/api/omega/dashboard/companies');
 
       if (!response.ok) {
         setError(await response.text());
@@ -853,7 +889,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
     setError('');
 
     try {
-      const response = await fetch('/api/omega/companies/update-data', {
+      const response = await apiFetch('/api/omega/companies/update-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ databaseName: null })
@@ -1081,7 +1117,7 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
     setError('');
 
     try {
-      const response = await fetch('/api/olymp/dashboard/companies');
+      const response = await apiFetch('/api/olymp/dashboard/companies');
 
       if (!response.ok) {
         setError(await response.text());
@@ -1110,7 +1146,7 @@ function OlympDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
     setError('');
 
     try {
-      const response = await fetch('/api/olymp/companies/update-data', {
+      const response = await apiFetch('/api/olymp/companies/update-data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ databaseName: null })
@@ -1302,7 +1338,7 @@ function OlympCompanyDetailPage({
     setError('');
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/olymp/dashboard/companies/${dataReadServerId}/${encodeURIComponent(databaseName)}`
       );
 
@@ -1483,7 +1519,7 @@ function OmegaCompanyDetailPage({
     setError('');
 
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `/api/omega/dashboard/companies/${dataReadServerId}/${encodeURIComponent(databaseName)}`
       );
 
@@ -1941,7 +1977,7 @@ function OrphanPaymentsModal({ dataReadServerId, databaseName, companyName, onCl
   useEffect(() => {
     async function load() {
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           `/api/omega/dashboard/companies/${dataReadServerId}/${encodeURIComponent(databaseName)}/orphan-payments`
         );
         if (!response.ok) {
@@ -2047,4 +2083,6 @@ function writeFilters(key: string, state: DashboardFilterState): void {
   }
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(
+  <AuthGate>{(user, logout) => <App user={user} onLogout={logout} />}</AuthGate>
+);
