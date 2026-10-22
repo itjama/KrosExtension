@@ -72,6 +72,45 @@ public class SecretEncryptionTests(ApiFactory factory) : IClassFixture<ApiFactor
     }
 
     [Fact]
+    public async Task UndecryptableSecret_ReadsAsEmpty_AndDoesNotBreakStartupOrEndpoints()
+    {
+        const string legacy = "mixed-plaintext";
+        var serverName = UniqueServer();
+        var id = Guid.NewGuid();
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO DataReadServers
+                    (Id, DisplayName, ServerName, IsActive, TrustServerCertificate,
+                     OlympAuthenticationMode, OlympUserName, OlympPassword,
+                     OmegaAuthenticationMode, OmegaUserName, OmegaPassword)
+                VALUES ({id}, {serverName}, {serverName}, 1, 1, 2, 'sa', 'enc:not-a-valid-payload', 2, 'sa', {legacy})
+                """, Ct);
+        }
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var migrator = scope.ServiceProvider.GetRequiredService<IDataReadServerSecretMigrator>();
+            await migrator.EncryptPlaintextSecretsAsync(Ct);
+        }
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var server = await db.DataReadServers.SingleAsync(s => s.Id == id, Ct);
+            Assert.Equal(string.Empty, server.OlympPassword);
+            Assert.Equal(legacy, server.OmegaPassword);
+        }
+
+        using var client = await factory.LoginAsAdminAsync(Ct);
+        using var response = await client.GetAsync("/api/data-read-servers", Ct);
+        Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Migrator_EncryptsLegacyPlaintextRows()
     {
         const string secret = "legacy-secret";
