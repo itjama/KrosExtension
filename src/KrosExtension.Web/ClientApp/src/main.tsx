@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createPortal } from 'react-dom';
 import { BarChart3, ChevronDown, Database, LogOut, RefreshCw, Save, Server, Settings, Trash2, Users } from 'lucide-react';
 import { apiFetch } from './api';
+import { UsersPage } from './admin/UsersPage';
 import { AuthGate, ChangePasswordForm, type CurrentUser } from './auth';
 import './styles.css';
 
@@ -363,7 +364,7 @@ function App({ user, onLogout }: { user: CurrentUser; onLogout: () => Promise<vo
         </div>
       )}
       <section className="workspace">
-        {isAdmin && section === 'admin-users' && <p>Správa používateľov bude doplnená.</p>}
+        {isAdmin && section === 'admin-users' && <UsersPage currentUserId={user.id} />}
         {isAdmin && section === 'settings-servers' && <ServersPage />}
         {isAdmin && section === 'settings-olymp' && <CompaniesPage product="olymp" />}
         {isAdmin && section === 'settings-omega' && <CompaniesPage product="omega" />}

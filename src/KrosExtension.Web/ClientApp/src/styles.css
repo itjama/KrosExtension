@@ -1011,3 +1011,13 @@ th {
 .sidebar-user + .sidebar-copyright {
   margin-top: 0;
 }
+
+/* ---- Admin users ---- */
+.temp-password {
+  background: #f1f5f9;
+  border-radius: 6px;
+  display: inline-block;
+  font-size: 18px;
+  padding: 8px 12px;
+  user-select: all;
+}
