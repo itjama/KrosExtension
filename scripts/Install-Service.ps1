@@ -112,8 +112,11 @@ foreach ($svc in @($webName, $apiName)) {
 # ── Copy files ────────────────────────────────────────────────────────────────
 Write-Host "[1/4] Copying files to $InstallDir..." -ForegroundColor Yellow
 if (-not (Test-Path $InstallDir)) { New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null }
-Copy-Item -Path $apiSrc -Destination $apiDest -Recurse -Force
-Copy-Item -Path $webSrc -Destination $webDest -Recurse -Force
+# Copy the CONTENTS into an existing destination (copying the folder itself would nest api\api on re-install).
+New-Item -ItemType Directory -Path $apiDest -Force | Out-Null
+New-Item -ItemType Directory -Path $webDest -Force | Out-Null
+Copy-Item -Path (Join-Path $apiSrc '*') -Destination $apiDest -Recurse -Force
+Copy-Item -Path (Join-Path $webSrc '*') -Destination $webDest -Recurse -Force
 
 # ── Production config (created only when missing, never overwritten) ─────────
 $webProd = Join-Path $webDest 'appsettings.Production.json'
