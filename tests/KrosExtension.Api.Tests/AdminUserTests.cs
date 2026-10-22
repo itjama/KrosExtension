@@ -194,6 +194,42 @@ public class AdminUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task ChangeRole_MissingRole_Returns400()
+    {
+        var user = await SeedUserAsync();
+        using var admin = await factory.LoginAsAdminAsync(Ct);
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}/role", new { }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Rola je povinná.", await ReadMessageAsync(response));
+    }
+
+    [Fact]
+    public async Task ChangeRole_UndefinedRoleZero_Returns400()
+    {
+        var user = await SeedUserAsync();
+        using var admin = await factory.LoginAsAdminAsync(Ct);
+
+        var response = await admin.PutAsJsonAsync($"/api/admin/users/{user.Id}/role", new { role = 0 }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateUser_UndefinedRole_Returns400_AndDoesNotCreate()
+    {
+        using var admin = await factory.LoginAsAdminAsync(Ct);
+        var name = UniqueName();
+
+        var response = await admin.PostAsJsonAsync("/api/admin/users", new { userName = name, role = 99 }, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var list = await ReadJsonAsync(await admin.GetAsync("/api/admin/users", Ct));
+        Assert.DoesNotContain(list.EnumerateArray(), u => u.GetProperty("userName").GetString() == name);
+    }
+
+    [Fact]
     public async Task Unblock_AllowsLoginAgain()
     {
         var user = await SeedUserAsync();

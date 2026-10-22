@@ -8,6 +8,8 @@ namespace KrosExtension.Api.Endpoints;
 
 public static class AdminUserEndpoints
 {
+    private const string InvalidRoleMessage = "Rola je povinná.";
+
     public static IEndpointRouteBuilder MapAdminUserEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints
@@ -29,6 +31,11 @@ public static class AdminUserEndpoints
                 TimeProvider timeProvider,
                 CancellationToken ct) =>
             {
+                if (request?.Role is { } requestedRole && !Enum.IsDefined(requestedRole))
+                {
+                    return Results.BadRequest(InvalidRoleMessage);
+                }
+
                 var result = await service.CreateUserAsync(
                     request?.UserName ?? string.Empty,
                     request?.Role ?? UserRole.User,
@@ -95,12 +102,12 @@ public static class AdminUserEndpoints
                     return Results.Unauthorized();
                 }
 
-                if (request is null)
+                if (request?.Role is not { } role || !Enum.IsDefined(role))
                 {
-                    return Results.BadRequest("Rola je povinná.");
+                    return Results.BadRequest(InvalidRoleMessage);
                 }
 
-                var result = await service.ChangeRoleAsync(actingUserId, id, request.Role, ct);
+                var result = await service.ChangeRoleAsync(actingUserId, id, role, ct);
                 return result.Error == UserAdminError.None ? Results.NoContent() : ToError(result.Error);
             })
             .WithName("ChangeAdminUserRole");
@@ -123,7 +130,7 @@ public static class AdminUserEndpoints
 
     public sealed record CreateUserRequest(string? UserName, UserRole? Role);
 
-    public sealed record ChangeRoleRequest(UserRole Role);
+    public sealed record ChangeRoleRequest(UserRole? Role);
 
     public sealed record TemporaryPasswordResponse(string? TemporaryPassword);
 
