@@ -111,6 +111,41 @@ public class SecretEncryptionTests(ApiFactory factory) : IClassFixture<ApiFactor
     }
 
     [Fact]
+    public async Task Migrator_ReportsUndecryptableSecrets_ByServerAndColumnOnly()
+    {
+        var serverName = UniqueServer();
+        var id = Guid.NewGuid();
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            await db.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                INSERT INTO DataReadServers
+                    (Id, DisplayName, ServerName, IsActive, TrustServerCertificate,
+                     OlympAuthenticationMode, OlympUserName, OlympPassword,
+                     OmegaAuthenticationMode, OmegaUserName, OmegaPassword)
+                VALUES ({id}, {serverName}, {serverName}, 1, 1, 2, 'sa', 'enc:not-a-valid-payload', 1, '', '')
+                """, Ct);
+        }
+
+        var validServerName = await AddServerAsync("Valid-Secret-1");
+
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var validId = (await db.DataReadServers.SingleAsync(s => s.ServerName == validServerName, Ct)).Id;
+            var migrator = scope.ServiceProvider.GetRequiredService<IDataReadServerSecretMigrator>();
+
+            var undecryptable = await migrator.FindUndecryptableSecretsAsync(Ct);
+
+            Assert.Contains(new UndecryptableSecret(id, "OlympPassword"), undecryptable);
+            Assert.DoesNotContain(new UndecryptableSecret(id, "OmegaPassword"), undecryptable);
+            Assert.DoesNotContain(undecryptable, item => item.ServerId == validId);
+        }
+    }
+
+    [Fact]
     public async Task Migrator_EncryptsLegacyPlaintextRows()
     {
         const string secret = "legacy-secret";

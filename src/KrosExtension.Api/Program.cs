@@ -43,13 +43,21 @@ using (var scope = app.Services.CreateScope())
         .GetRequiredService<IAdminBootstrapper>()
         .RunAsync();
 
-    var encryptedServers = await scope.ServiceProvider
-        .GetRequiredService<IDataReadServerSecretMigrator>()
-        .EncryptPlaintextSecretsAsync();
+    var secretMigrator = scope.ServiceProvider.GetRequiredService<IDataReadServerSecretMigrator>();
+    var encryptedServers = await secretMigrator.EncryptPlaintextSecretsAsync();
 
     if (encryptedServers > 0)
     {
         app.Logger.LogInformation("Encrypted SQL passwords of {Count} data read server(s).", encryptedServers);
+    }
+
+    foreach (var secret in await secretMigrator.FindUndecryptableSecretsAsync())
+    {
+        // Only the server id and column are logged, never the stored value.
+        app.Logger.LogWarning(
+            "Stored SQL password {Column} of data read server {ServerId} cannot be decrypted with the current data protection keys; it is treated as empty. Delete and re-add the server with the password.",
+            secret.Column,
+            secret.ServerId);
     }
 }
 
