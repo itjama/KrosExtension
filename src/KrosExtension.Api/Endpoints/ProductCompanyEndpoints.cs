@@ -1,3 +1,4 @@
+using KrosExtension.Api.Auth;
 using KrosExtension.Application.Companies;
 using KrosExtension.Application.Configuration;
 using KrosExtension.Domain.Configuration;
@@ -28,7 +29,7 @@ public static class ProductCompanyEndpoints
             return Results.Ok(new ProductRefreshSettingsResponse(
                 settings.ProductType,
                 settings.RefreshTime.ToString("HH:mm")));
-        }).WithName($"Get{productType}RefreshSettings");
+        }).RequireAuthorization(AuthPolicies.Admin).WithName($"Get{productType}RefreshSettings");
 
         productGroup.MapPut("/refresh-settings", async (
             SaveProductRefreshSettingsRequest request,
@@ -42,7 +43,7 @@ public static class ProductCompanyEndpoints
 
             await settingsRepository.SaveProductRefreshSettingsAsync(productType, refreshTime, cancellationToken);
             return Results.NoContent();
-        }).WithName($"Save{productType}RefreshSettings");
+        }).RequireAuthorization(AuthPolicies.Admin).WithName($"Save{productType}RefreshSettings");
 
         if (productType == ProductType.Olymp)
         {
@@ -111,7 +112,7 @@ public static class ProductCompanyEndpoints
         {
             var companies = await discoveryReader.DiscoverCompaniesAsync(productType, cancellationToken);
             return Results.Ok(companies);
-        }).WithName($"Discover{productType}Companies");
+        }).RequireAuthorization(AuthPolicies.Admin).WithName($"Discover{productType}Companies");
 
         group.MapGet("/tracked", async (
             ISettingsRepository settingsRepository,
@@ -126,7 +127,7 @@ public static class ProductCompanyEndpoints
                 company.CompanyName,
                 company.AccountingYear,
                 company.IsTracked)));
-        }).WithName($"GetTracked{productType}Companies");
+        }).RequireAuthorization(AuthPolicies.Admin).WithName($"GetTracked{productType}Companies");
 
         group.MapPut("/tracked", async (
             SaveTrackedCompaniesRequest request,
@@ -144,7 +145,7 @@ public static class ProductCompanyEndpoints
 
             await settingsRepository.SaveTrackedCompaniesAsync(productType, selections, cancellationToken);
             return Results.NoContent();
-        }).WithName($"SaveTracked{productType}Companies");
+        }).RequireAuthorization(AuthPolicies.Admin).WithName($"SaveTracked{productType}Companies");
 
         group.MapGet("/statistics", async (
             ICompanyStatisticsReader statisticsReader,

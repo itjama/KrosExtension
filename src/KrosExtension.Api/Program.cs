@@ -43,7 +43,7 @@ using (var scope = app.Services.CreateScope())
         .RunAsync();
 }
 
-if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();

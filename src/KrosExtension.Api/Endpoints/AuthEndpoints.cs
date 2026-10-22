@@ -42,6 +42,7 @@ public static class AuthEndpoints
                 }
             })
             .AllowAnonymous()
+            .RequireRateLimiting(AuthenticationSetup.LoginRateLimitPolicy)
             .WithName("Login");
 
         group.MapPost("/logout", async (HttpContext httpContext) =>
@@ -98,6 +99,7 @@ public static class AuthEndpoints
                 }
             })
             .RequireAuthorization(AuthPolicies.PasswordChange)
+            .RequireRateLimiting(AuthenticationSetup.LoginRateLimitPolicy)
             .WithName("ChangePassword");
 
         return endpoints;

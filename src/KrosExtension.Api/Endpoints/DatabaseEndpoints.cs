@@ -1,3 +1,4 @@
+using KrosExtension.Api.Auth;
 using KrosExtension.Application.Configuration;
 using KrosExtension.Domain.Configuration;
 
@@ -9,7 +10,8 @@ public static class DatabaseEndpoints
     {
         var group = endpoints
             .MapGroup("/api/databases")
-            .WithTags("Databases");
+            .WithTags("Databases")
+            .RequireAuthorization(AuthPolicies.Admin);
 
         group.MapGet("/catalog/{productType}", async (
             ProductType productType,

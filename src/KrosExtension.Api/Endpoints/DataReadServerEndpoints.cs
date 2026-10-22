@@ -1,3 +1,4 @@
+using KrosExtension.Api.Auth;
 using KrosExtension.Application.Configuration;
 using KrosExtension.Domain.Configuration;
 
@@ -9,7 +10,8 @@ public static class DataReadServerEndpoints
     {
         var group = endpoints
             .MapGroup("/api/data-read-servers")
-            .WithTags("Data read servers");
+            .WithTags("Data read servers")
+            .RequireAuthorization(AuthPolicies.Admin);
 
         group.MapGet("/", async (
             ISettingsRepository settingsRepository,

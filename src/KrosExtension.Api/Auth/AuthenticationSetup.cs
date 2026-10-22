@@ -2,6 +2,8 @@ using KrosExtension.Domain.Users;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Threading.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace KrosExtension.Api.Auth;
@@ -9,6 +11,7 @@ namespace KrosExtension.Api.Auth;
 public static class AuthenticationSetup
 {
     public const string CookieName = "LedgerPulse.Auth";
+    public const string LoginRateLimitPolicy = "login";
 
     public static IServiceCollection AddAppAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
@@ -69,11 +72,33 @@ public static class AuthenticationSetup
                 .RequireRole(nameof(UserRole.Admin)))
             .AddPolicy(AuthPolicies.PasswordChange, policy => policy.RequireAuthenticatedUser());
 
+        // Default trust is loopback only, which matches the reverse proxy running on the same machine.
+        services.Configure<ForwardedHeadersOptions>(options =>
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor);
+
+        var loginLimit = configuration.GetValue<int?>($"{AuthOptions.SectionName}:{nameof(AuthOptions.LoginRateLimitPerMinute)}")
+            ?? new AuthOptions().LoginRateLimitPerMinute;
+        services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(LoginRateLimitPolicy, httpContext =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = loginLimit,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    }));
+        });
+
         return services;
     }
 
     public static WebApplication UseAppAuthentication(this WebApplication app)
     {
+        app.UseForwardedHeaders();
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         return app;

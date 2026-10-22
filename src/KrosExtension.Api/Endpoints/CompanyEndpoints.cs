@@ -1,3 +1,4 @@
+using KrosExtension.Api.Auth;
 using KrosExtension.Application.Configuration;
 
 namespace KrosExtension.Api.Endpoints;
@@ -8,7 +9,8 @@ public static class CompanyEndpoints
     {
         var group = endpoints
             .MapGroup("/api/companies")
-            .WithTags("Companies");
+            .WithTags("Companies")
+            .RequireAuthorization(AuthPolicies.Admin);
 
         group.MapGet("/data-sources", async (
             ISettingsRepository settingsRepository,
