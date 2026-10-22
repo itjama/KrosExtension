@@ -15,5 +15,9 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
     <!-- Pinned transitive dependency (Microsoft.Data.SqlClient) to fix GHSA-846f-f764-76mx -->
     <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
+    <PackageVersion Include="xunit.v3" Version="4.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
   </ItemGroup>
 </Project>
