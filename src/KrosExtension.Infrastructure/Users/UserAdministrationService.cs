@@ -47,8 +47,15 @@ public sealed class UserAdministrationService(
         return new UserAdminResult(UserAdminError.None, user, temporaryPassword);
     }
 
-    public async Task<UserAdminResult> ResetPasswordAsync(Guid userId, CancellationToken ct = default)
+    public async Task<UserAdminResult> ResetPasswordAsync(Guid actingUserId, Guid userId, CancellationToken ct = default)
     {
+        if (actingUserId == userId)
+        {
+            // Resetting your own password rotates your security stamp and ends your session
+            // before you can see the temporary password; use "Zmeniť heslo" instead.
+            return new UserAdminResult(UserAdminError.CannotModifySelf);
+        }
+
         var user = await db.Users.FirstOrDefaultAsync(item => item.Id == userId, ct);
         if (user is null)
         {

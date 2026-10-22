@@ -9,6 +9,7 @@ namespace KrosExtension.Api.Endpoints;
 public static class AdminUserEndpoints
 {
     private const string InvalidRoleMessage = "Rola je povinná.";
+    private const string CannotResetOwnPasswordMessage = "Vlastné heslo si zmeň cez Zmeniť heslo.";
 
     public static IEndpointRouteBuilder MapAdminUserEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -54,13 +55,22 @@ public static class AdminUserEndpoints
 
         group.MapPost("/{id:guid}/reset-password", async (
                 Guid id,
+                ClaimsPrincipal principal,
                 IUserAdministrationService service,
                 CancellationToken ct) =>
             {
-                var result = await service.ResetPasswordAsync(id, ct);
-                return result.Error == UserAdminError.None
-                    ? Results.Ok(new TemporaryPasswordResponse(result.TemporaryPassword))
-                    : ToError(result.Error);
+                if (!TryGetUserId(principal, out var actingUserId))
+                {
+                    return Results.Unauthorized();
+                }
+
+                var result = await service.ResetPasswordAsync(actingUserId, id, ct);
+                return result.Error switch
+                {
+                    UserAdminError.None => Results.Ok(new TemporaryPasswordResponse(result.TemporaryPassword)),
+                    UserAdminError.CannotModifySelf => Results.BadRequest(CannotResetOwnPasswordMessage),
+                    _ => ToError(result.Error),
+                };
             })
             .WithName("ResetAdminUserPassword");
 

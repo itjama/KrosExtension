@@ -155,6 +155,19 @@ public class AdminUserTests(ApiFactory factory) : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task ResetPassword_Self_Returns400_AndKeepsSession()
+    {
+        using var admin = await factory.LoginAsAdminAsync(Ct);
+        var adminId = await CurrentUserIdAsync(admin);
+
+        var response = await admin.PostAsync($"/api/admin/users/{adminId}/reset-password", null, Ct);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("Vlastné heslo si zmeň cez Zmeniť heslo.", await ReadMessageAsync(response));
+        Assert.Equal(HttpStatusCode.OK, (await admin.GetAsync("/api/auth/me", Ct)).StatusCode);
+    }
+
+    [Fact]
     public async Task Block_InvalidatesAllExistingSessions()
     {
         var user = await SeedUserAsync();

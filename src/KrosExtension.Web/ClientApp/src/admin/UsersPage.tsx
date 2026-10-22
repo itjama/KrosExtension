@@ -184,9 +184,9 @@ export function UsersPage({ currentUserId }: { currentUserId: string }) {
                 <td>{formatLastLogin(user.lastLoginAt)}</td>
                 <td>
                   <div className="actions">
-                    <button onClick={() => void resetPassword(user)}>Reset hesla</button>
                     {!isSelf && (
                       <>
+                        <button onClick={() => void resetPassword(user)}>Reset hesla</button>
                         <button onClick={() => void setBlocked(user, !user.isBlocked)}>
                           {user.isBlocked ? 'Odblokovať' : 'Zablokovať'}
                         </button>

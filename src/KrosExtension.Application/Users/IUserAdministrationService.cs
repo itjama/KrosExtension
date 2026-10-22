@@ -8,7 +8,7 @@ public interface IUserAdministrationService
 
     Task<UserAdminResult> CreateUserAsync(string userName, UserRole role, CancellationToken ct = default);
 
-    Task<UserAdminResult> ResetPasswordAsync(Guid userId, CancellationToken ct = default);
+    Task<UserAdminResult> ResetPasswordAsync(Guid actingUserId, Guid userId, CancellationToken ct = default);
 
     Task<UserAdminResult> BlockAsync(Guid actingUserId, Guid userId, CancellationToken ct = default);
 
