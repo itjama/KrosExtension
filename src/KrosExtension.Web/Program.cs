@@ -10,9 +10,17 @@ builder.Host.UseWindowsService(options =>
 
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"] ?? "http://localhost:5184";
 builder.Services.AddHttpClient("Api", client =>
-{
-    client.BaseAddress = new Uri(apiBaseUrl);
-});
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+    })
+    // The proxy is shared by all visitors: never keep a cookie jar (it would replay one user's
+    // auth cookie for everyone) and never follow redirects. Cookie and Set-Cookie headers are
+    // forwarded verbatim by ProxyToApiAsync.
+    .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+    {
+        UseCookies = false,
+        AllowAutoRedirect = false,
+    });
 
 var app = builder.Build();
 
