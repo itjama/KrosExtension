@@ -5,6 +5,11 @@ using KrosExtension.Infrastructure.CompanyData;
 using KrosExtension.Infrastructure.Companies;
 using KrosExtension.Infrastructure.Configuration;
 using KrosExtension.Application.Abstractions;
+using KrosExtension.Application.Users;
+using KrosExtension.Domain.Users;
+using KrosExtension.Infrastructure.Users;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using KrosExtension.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -33,6 +38,11 @@ public static class DependencyInjection
 
         services.Configure<DatabaseCatalogOptions>(
             configuration.GetSection(DatabaseCatalogOptions.SectionName));
+
+        services.Configure<BootstrapOptions>(configuration.GetSection(BootstrapOptions.SectionName));
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
+        services.AddScoped<IAdminBootstrapper, AdminBootstrapper>();
 
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<IDatabaseCatalogReader, DatabaseCatalogReader>();

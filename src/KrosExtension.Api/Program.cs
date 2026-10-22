@@ -1,6 +1,7 @@
 using KrosExtension.Api.Endpoints;
 using KrosExtension.Api.Services;
 using KrosExtension.Application;
+using KrosExtension.Application.Users;
 using KrosExtension.Infrastructure;
 using KrosExtension.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -34,6 +35,10 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider
         .GetRequiredService<ApplicationDbContext>()
         .Database.Migrate();
+
+    await scope.ServiceProvider
+        .GetRequiredService<IAdminBootstrapper>()
+        .RunAsync();
 }
 
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger:Enabled"))
@@ -50,3 +55,5 @@ app.MapProductCompanyEndpoints();
 app.MapSystemEndpoints();
 
 app.Run();
+
+public partial class Program;

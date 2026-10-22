@@ -17,7 +17,7 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.8")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -521,6 +521,64 @@ namespace KrosExtension.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("HealthCheckRecords", (string)null);
+                });
+
+            modelBuilder.Entity("KrosExtension.Domain.Users.AppUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("FailedLoginCount")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset?>("LastLoginAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset?>("LockoutEndsAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("NormalizedUserName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset?>("PasswordChangedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SecurityStamp")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("UserName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique();
+
+                    b.ToTable("AppUsers", (string)null);
                 });
 #pragma warning restore 612, 618
         }

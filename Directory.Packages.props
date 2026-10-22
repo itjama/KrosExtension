@@ -11,6 +11,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Hosting.WindowsServices" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Identity.Core" Version="10.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.13" />
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.3.1" />
     <!-- Pinned transitive dependency (Microsoft.Data.SqlClient) to fix GHSA-846f-f764-76mx -->

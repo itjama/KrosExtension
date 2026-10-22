@@ -1,6 +1,7 @@
 using KrosExtension.Application.Abstractions;
 using KrosExtension.Domain.Configuration;
 using KrosExtension.Domain.Health;
+using KrosExtension.Domain.Users;
 using Microsoft.EntityFrameworkCore;
 
 namespace KrosExtension.Infrastructure.Persistence;
@@ -23,6 +24,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<OmegaCompanyDashboardSnapshot> OmegaCompanyDashboardSnapshots => Set<OmegaCompanyDashboardSnapshot>();
 
     public DbSet<OlympCompanyDashboardSnapshot> OlympCompanyDashboardSnapshots => Set<OlympCompanyDashboardSnapshot>();
+
+    public DbSet<AppUser> Users => Set<AppUser>();
 
     IQueryable<AvailableDatabase> IApplicationDbContext.AvailableDatabases => AvailableDatabases;
 
