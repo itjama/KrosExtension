@@ -2,6 +2,7 @@ using KrosExtension.Api.Auth;
 using KrosExtension.Api.Endpoints;
 using KrosExtension.Api.Services;
 using KrosExtension.Application;
+using KrosExtension.Application.Configuration;
 using KrosExtension.Application.Users;
 using KrosExtension.Infrastructure;
 using KrosExtension.Infrastructure.Persistence;
@@ -41,6 +42,15 @@ using (var scope = app.Services.CreateScope())
     await scope.ServiceProvider
         .GetRequiredService<IAdminBootstrapper>()
         .RunAsync();
+
+    var encryptedServers = await scope.ServiceProvider
+        .GetRequiredService<IDataReadServerSecretMigrator>()
+        .EncryptPlaintextSecretsAsync();
+
+    if (encryptedServers > 0)
+    {
+        app.Logger.LogInformation("Encrypted SQL passwords of {Count} data read server(s).", encryptedServers);
+    }
 }
 
 if (app.Environment.IsDevelopment())

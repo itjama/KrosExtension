@@ -2,11 +2,14 @@ using KrosExtension.Application.Abstractions;
 using KrosExtension.Domain.Configuration;
 using KrosExtension.Domain.Health;
 using KrosExtension.Domain.Users;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 
 namespace KrosExtension.Infrastructure.Persistence;
 
-public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+public sealed class ApplicationDbContext(
+    DbContextOptions<ApplicationDbContext> options,
+    IDataProtectionProvider? dataProtectionProvider = null)
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<AvailableDatabase> AvailableDatabases => Set<AvailableDatabase>();
@@ -60,5 +63,14 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        if (dataProtectionProvider is not null)
+        {
+            var converter = new SecretValueConverter(
+                dataProtectionProvider.CreateProtector(SecretValueConverter.Purpose));
+            var server = modelBuilder.Entity<DataReadServer>();
+            server.Property(s => s.OlympPassword).HasConversion(converter);
+            server.Property(s => s.OmegaPassword).HasConversion(converter);
+        }
     }
 }

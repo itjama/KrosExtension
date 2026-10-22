@@ -46,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUserAdministrationService, UserAdministrationService>();
 
+        services.AddScoped<IDataReadServerSecretMigrator, DataReadServerSecretMigrator>();
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<IDatabaseCatalogReader, DatabaseCatalogReader>();
         services.AddScoped<ICompanyDiscoveryReader, CompanyDiscoveryReader>();
