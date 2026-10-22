@@ -38,7 +38,7 @@ public class BootstrapTests
     {
         var name = NewDbName();
         string changedHash;
-        await using (var first = new ApiFactory(name, ownsDatabase: false))
+        await using (var first = ApiFactory.ForDatabase(name, ownsDatabase: false))
         {
             changedHash = await WithDbAsync(first, async db =>
             {
@@ -49,7 +49,7 @@ public class BootstrapTests
             });
         }
 
-        await using var second = new ApiFactory(name, ownsDatabase: true);
+        await using var second = ApiFactory.ForDatabase(name, ownsDatabase: true);
         var user = await WithDbAsync(second, db => db.Users.SingleAsync());
 
         Assert.Equal(changedHash, user.PasswordHash);
@@ -60,7 +60,7 @@ public class BootstrapTests
     public async Task Bootstrap_AdminBlocked_RestoresAndUnlocks()
     {
         var name = NewDbName();
-        await using (var first = new ApiFactory(name, ownsDatabase: false))
+        await using (var first = ApiFactory.ForDatabase(name, ownsDatabase: false))
         {
             await WithDbAsync(first, async db =>
             {
@@ -77,7 +77,7 @@ public class BootstrapTests
             });
         }
 
-        await using var second = new ApiFactory(name, ownsDatabase: true);
+        await using var second = ApiFactory.ForDatabase(name, ownsDatabase: true);
         var user = await WithDbAsync(second, db => db.Users.SingleAsync());
 
         Assert.False(user.IsBlocked);
@@ -93,7 +93,7 @@ public class BootstrapTests
         await using var factory = new NoPasswordFactory();
         using var client = factory.CreateClient();
 
-        var response = await client.GetAsync("/health");
+        var response = await client.GetAsync("/health", TestContext.Current.CancellationToken);
 
         Assert.Equal(System.Net.HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(await WithDbAsync(factory, db => db.Users.ToListAsync()));

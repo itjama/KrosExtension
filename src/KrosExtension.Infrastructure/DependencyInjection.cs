@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IPasswordHasher<AppUser>, PasswordHasher<AppUser>>();
         services.AddScoped<IAdminBootstrapper, AdminBootstrapper>();
+        services.AddScoped<IUserAccountService, UserAccountService>();
 
         services.AddScoped<ISettingsRepository, SettingsRepository>();
         services.AddScoped<IDatabaseCatalogReader, DatabaseCatalogReader>();

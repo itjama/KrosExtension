@@ -1,3 +1,4 @@
+using KrosExtension.Api.Auth;
 using KrosExtension.Api.Endpoints;
 using KrosExtension.Api.Services;
 using KrosExtension.Application;
@@ -18,6 +19,7 @@ builder.Host.UseWindowsService(options =>
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddAppAuthentication(builder.Configuration);
 builder.Services.AddHostedService<DataRefreshBackgroundService>();
 
 builder.Services.AddEndpointsApiExplorer();
@@ -47,7 +49,10 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Swagger
     app.UseSwaggerUI();
 }
 
-app.MapHealthChecks("/health");
+app.UseAppAuthentication();
+
+app.MapHealthChecks("/health").AllowAnonymous();
+app.MapAuthEndpoints();
 app.MapDatabaseEndpoints();
 app.MapDataReadServerEndpoints();
 app.MapCompanyEndpoints();
