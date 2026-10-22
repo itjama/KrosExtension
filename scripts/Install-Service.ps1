@@ -32,17 +32,20 @@
 
 .PARAMETER CertificatePath
     Path to a PFX file used by the Web HTTPS endpoint (with -CertificatePassword).
+    When web\appsettings.Production.json already exists, passing any certificate
+    parameter updates only the certificate in it.
 
 .PARAMETER CertificatePassword
-    Password of the PFX file.
+    Password of the PFX file (stored in web\appsettings.Production.json).
 
 .PARAMETER CertificateSubject
     Subject of a certificate in LocalMachine\My used by the Web HTTPS endpoint
     (alternative to -CertificatePath).
 
 .PARAMETER BootstrapAdminPassword
-    Initial password of the 'admin' account. Written to api\appsettings.Production.json
-    only when that file does not exist yet.
+    Initial password of the 'admin' account, written to Bootstrap:AdminPassword in
+    api\appsettings.Production.json. When the file already exists, only that key is
+    updated, and only when this parameter is passed.
 
 .EXAMPLE
     .\Install-Service.ps1
@@ -118,39 +121,134 @@ New-Item -ItemType Directory -Path $webDest -Force | Out-Null
 Copy-Item -Path (Join-Path $apiSrc '*') -Destination $apiDest -Recurse -Force
 Copy-Item -Path (Join-Path $webSrc '*') -Destination $webDest -Recurse -Force
 
-# ── Production config (created only when missing, never overwritten) ─────────
-$webProd = Join-Path $webDest 'appsettings.Production.json'
-if (-not (Test-Path $webProd)) {
-    $cert = $null
-    if ($CertificatePath) {
-        $cert = [ordered]@{ Path = $CertificatePath; Password = $CertificatePassword }
-    } elseif ($CertificateSubject) {
-        $cert = [ordered]@{ Subject = $CertificateSubject; Store = 'My'; Location = 'LocalMachine' }
-    }
-    $https = [ordered]@{ Url = 'https://0.0.0.0:5284' }
-    if ($cert) {
-        $https.Certificate = $cert
+# ── Production config ─────────────────────────────────────────────────────────
+# Created when missing. An existing file is kept as is, except that the keys
+# for explicitly passed parameters are updated in place (certificate in the
+# Web file, Bootstrap:AdminPassword in the Api file). Secrets are never printed.
+function Set-JsonProperty {
+    param($Object, [string]$Name, $Value)
+    if ($Object.PSObject.Properties[$Name]) {
+        $Object.$Name = $Value
     } else {
-        Write-Warning "No certificate given (-CertificatePath / -CertificateSubject). HTTPS will not start until $webProd is completed."
+        $Object | Add-Member -NotePropertyName $Name -NotePropertyValue $Value
     }
-    $webCfg = [ordered]@{ Kestrel = [ordered]@{ Endpoints = [ordered]@{ Https = $https } } }
-    $webCfg | ConvertTo-Json -Depth 10 | Set-Content $webProd -Encoding utf8
-    Write-Host "    Created $webProd"
+}
+
+function Get-JsonChild {
+    # Returns the child object $Name, creating it (or replacing a non-object value) when needed.
+    param($Object, [string]$Name)
+    $property = $Object.PSObject.Properties[$Name]
+    if (-not $property -or $property.Value -isnot [System.Management.Automation.PSCustomObject]) {
+        Set-JsonProperty $Object $Name ([pscustomobject]@{})
+    }
+    return $Object.$Name
+}
+
+function Read-JsonConfig {
+    param([string]$Path)
+    $config = $null
+    if (Test-Path $Path) {
+        $config = Get-Content $Path -Raw | ConvertFrom-Json
+    }
+    if ($null -eq $config) {
+        $config = [pscustomobject]@{}
+    }
+    return $config
+}
+
+function Set-WebHttpsConfig {
+    # Ensures the HTTPS endpoint exists and applies the certificate parameters that were passed.
+    # Returns $true when a certificate is configured afterwards.
+    param($Config, $Bound)
+    $endpoints = Get-JsonChild (Get-JsonChild $Config 'Kestrel') 'Endpoints'
+    $https = Get-JsonChild $endpoints 'Https'
+    if (-not $https.PSObject.Properties['Url']) {
+        Set-JsonProperty $https 'Url' 'https://0.0.0.0:5284'
+    }
+
+    if ($Bound.ContainsKey('CertificatePath') -and $Bound['CertificatePath']) {
+        $password = ''
+        if ($Bound.ContainsKey('CertificatePassword')) { $password = $Bound['CertificatePassword'] }
+        Set-JsonProperty $https 'Certificate' ([pscustomobject][ordered]@{ Path = $Bound['CertificatePath']; Password = $password })
+    } elseif ($Bound.ContainsKey('CertificateSubject') -and $Bound['CertificateSubject']) {
+        Set-JsonProperty $https 'Certificate' ([pscustomobject][ordered]@{ Subject = $Bound['CertificateSubject']; Store = 'My'; Location = 'LocalMachine' })
+    } elseif ($Bound.ContainsKey('CertificatePassword') -and $https.PSObject.Properties['Certificate'] -and
+              $https.Certificate -is [System.Management.Automation.PSCustomObject] -and $https.Certificate.PSObject.Properties['Path']) {
+        # Only the PFX password changed.
+        Set-JsonProperty $https.Certificate 'Password' $Bound['CertificatePassword']
+    }
+
+    return [bool]($https.PSObject.Properties['Certificate'] -and $https.Certificate)
+}
+
+function Set-ApiBootstrapConfig {
+    param($Config, $Bound)
+    $bootstrap = Get-JsonChild $Config 'Bootstrap'
+    if (-not $bootstrap.PSObject.Properties['AdminUserName'] -or -not $bootstrap.AdminUserName) {
+        Set-JsonProperty $bootstrap 'AdminUserName' 'admin'
+    }
+    if ($Bound.ContainsKey('BootstrapAdminPassword') -or -not $bootstrap.PSObject.Properties['AdminPassword']) {
+        $password = ''
+        if ($Bound.ContainsKey('BootstrapAdminPassword')) { $password = $Bound['BootstrapAdminPassword'] }
+        Set-JsonProperty $bootstrap 'AdminPassword' $password
+    }
+    return [bool]$bootstrap.AdminPassword
+}
+
+function Write-JsonConfig {
+    param($Config, [string]$Path)
+    $Config | ConvertTo-Json -Depth 10 | Set-Content $Path -Encoding utf8
+}
+
+function Protect-AdminOnly {
+    # Restricts a file/folder holding secrets to Administrators and SYSTEM (SIDs, so it works on localized Windows).
+    param([string]$Path, [switch]$Directory)
+    $grant = if ($Directory) { '(OI)(CI)F' } else { 'F' }
+    & icacls.exe $Path /inheritance:r /grant:r "*S-1-5-32-544:$grant" "*S-1-5-18:$grant" | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Could not restrict access to $Path (icacls exit code $LASTEXITCODE)."
+    }
+}
+
+$certBound = $PSBoundParameters.ContainsKey('CertificatePath') -or
+             $PSBoundParameters.ContainsKey('CertificatePassword') -or
+             $PSBoundParameters.ContainsKey('CertificateSubject')
+
+$webProd = Join-Path $webDest 'appsettings.Production.json'
+if (-not (Test-Path $webProd) -or $certBound) {
+    $existed = Test-Path $webProd
+    $webCfg = Read-JsonConfig $webProd
+    $hasCert = Set-WebHttpsConfig $webCfg $PSBoundParameters
+    Write-JsonConfig $webCfg $webProd
+    if ($existed) { Write-Host "    Updated certificate settings in $webProd" } else { Write-Host "    Created $webProd" }
+    if (-not $hasCert) {
+        Write-Warning "No certificate configured (-CertificatePath / -CertificateSubject). HTTPS will not start until $webProd is completed."
+    }
 } else {
     Write-Host "    Keeping existing $webProd"
 }
+Protect-AdminOnly $webProd
 
 $apiProd = Join-Path $apiDest 'appsettings.Production.json'
-if (-not (Test-Path $apiProd)) {
-    if (-not $BootstrapAdminPassword) {
-        Write-Warning "No -BootstrapAdminPassword given. Set Bootstrap:AdminPassword in $apiProd before the first login."
+if (-not (Test-Path $apiProd) -or $PSBoundParameters.ContainsKey('BootstrapAdminPassword')) {
+    $existed = Test-Path $apiProd
+    $apiCfg = Read-JsonConfig $apiProd
+    $hasPassword = Set-ApiBootstrapConfig $apiCfg $PSBoundParameters
+    Write-JsonConfig $apiCfg $apiProd
+    if ($existed) { Write-Host "    Updated Bootstrap:AdminPassword in $apiProd" } else { Write-Host "    Created $apiProd" }
+    if (-not $hasPassword) {
+        Write-Warning "Bootstrap:AdminPassword is empty. If no active admin exists yet, set it in $apiProd before the first login."
     }
-    $apiCfg = [ordered]@{ Bootstrap = [ordered]@{ AdminUserName = 'admin'; AdminPassword = $BootstrapAdminPassword } }
-    $apiCfg | ConvertTo-Json -Depth 10 | Set-Content $apiProd -Encoding utf8
-    Write-Host "    Created $apiProd"
 } else {
     Write-Host "    Keeping existing $apiProd"
 }
+Protect-AdminOnly $apiProd
+
+# Data protection key ring (auth cookies, encrypted SQL passwords). The Api creates it on first start;
+# create it now so it can be restricted to Administrators and SYSTEM from the beginning.
+$keysDir = Join-Path $env:ProgramData 'KrosExtension\keys'
+New-Item -ItemType Directory -Path $keysDir -Force | Out-Null
+Protect-AdminOnly $keysDir -Directory
 
 # ── Patch API appsettings.json ────────────────────────────────────────────────
 Write-Host "[2/4] Configuring connection string..." -ForegroundColor Yellow
