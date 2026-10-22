@@ -15,7 +15,8 @@ Centrálna tabuľka. Každý riadok = jeden účtovný doklad.
 | `C028_KodZaevidoval` | Kto zaevidoval doklad |
 | `C108_PREdkontovany` | 0 = nie, nenulové = predkontovaný (pripravený na zaúčtovanie) |
 | `C114_DenZaevidovania`, `C115_Mes...`, `C116_Rok...` | Dátum zaevidovania (3 stĺpce — treba CONCAT + TRY_CONVERT) |
-| `C117_Den...`, `C118_Mes...`, `C119_Rok...` Poslednej opravy | Dátum poslednej zmeny (proxy pre dátum zaúčtovania) |
+| `C117_Den...`, `C118_Mes...`, `C119_Rok...` Poslednej opravy | Dátum poslednej zmeny — **nie** dátum zaúčtovania, môže byť resetnutý hromadnou úpravou |
+| `C120_DenUzavierkyHLK`, `C121_Mes...`, `C122_Rok...` | **Dátum zaúčtovania do HLK (Hlavnej knihy)** — správny dátum pre PostingLag výpočet |
 | `C060-C062` Vystavenia | Dátum vystavenia dokladu |
 | `C066_DenSplatnosti`, `C067_Mes...`, `C068_Rok...` | Dátum splatnosti (3 stĺpce) |
 | `C138_PovodDokladu` | Pôvod: 0=manuálny, nenulové=import |
@@ -47,7 +48,66 @@ Centrálna tabuľka. Každý riadok = jeden účtovný doklad.
 
 ### T047_EUD_UhradyOdpocty — Platby a zápočty
 - FK: `C010_IDEUD` → `T040_EUD.C000_ID`
+- FK: `C009_IDEUDPolozka` → `T041_EUD_Polozky` (riadok dokladu, ku ktorému patrí)
 - Orphan detection: LEFT JOIN kde T040_EUD.C000_ID IS NULL
+
+| Stĺpec | Typ | Popis |
+|--------|-----|-------|
+| `C000_ID` | int | PK |
+| `C002_Oznaceny` | smallint | |
+| `C003_Zamknuty` | smallint | |
+| `C009_IDEUDPolozka` | int | FK → T041_EUD_Polozky |
+| `C010_IDEUD` | int | FK → T040_EUD.C000_ID |
+| `C021_CisloInterneTypOkruh` | smallint | |
+| `C023_CisloInterneKodOkruh` | varchar | Kód okruhu (DF, OF, BV...) |
+| `C024_CisloInterneKodEvidencia` | varchar | |
+| `C025_CisloInterneKodCiselnaRada` | varchar | |
+| `C030_CisloInterne` | varchar | Interné číslo dokladu |
+| `C060_Den`, `C061_Mes`, `C062_Rok` | smallint | Dátum (3 stĺpce — CONCAT + TRY_CONVERT) |
+| `C082_Cas` | varchar | Čas |
+| `C097_Poznamka` | text | Poznámka |
+| `C100_Typ` | smallint | Typ úhrady/odpočtu |
+| `C101_SposobPridania` | smallint | |
+| `C102_CRWPriznak` | smallint | |
+| `C103_VzajomnyZapocet` | smallint | Vzájomný zápočet flag |
+| `C106_MDSyntetickyUcet` | varchar | MD syntetický účet |
+| `C107_MDAnalytickyUcet` | varchar | MD analytický účet |
+| `C108_DALSyntetickyUcet` | varchar | DAL syntetický účet |
+| `C109_DALAnalytickyUcet` | varchar | DAL analytický účet |
+| `C130–C134_CisloInyDoklad*` | mix | Odkaz na iný doklad (typ, kód, evidencia, čís. rada, číslo) |
+| `C150_PriznakSLD` | smallint | |
+| `C151_RucneVysporiadanie` | smallint | |
+| `C152_PreSLDOpacneZnamienko` | smallint | |
+| `C153_PodTyp` | smallint | |
+| `C200_Mena` | varchar | Mena |
+| `C201_MnozstvoJednotky` | smallint | |
+| `C202_KurzNBS` | float | Kurz NBS |
+| `C203_KurzBanka` | float | Kurz banky |
+| `C210_SumaSpoluZahranicnaMena` | money | Suma v cudzej mene |
+| `C211_SumaSpolu` | money | **Suma celkom v EUR** |
+| `C212_Ciastka3M` | money | Čiastka 3. mena |
+| `C214_ZakladDPHNizsi` | money | Základ DPH — nižšia sadzba |
+| `C215_ZakladDPHVyssi` | money | Základ DPH — vyššia sadzba |
+| `C216_ZakladDPHNulovy` | money | Základ DPH — nulová sadzba |
+| `C217_ZakladDPHNeobsahuje` | money | Základ — neobsahuje DPH |
+| `C218_SumaDPHNizsia` | money | Suma DPH — nižšia sadzba |
+| `C219_SumaDPHVyssia` | money | Suma DPH — vyššia sadzba |
+| `C221_SumaSpoluNizsia` | money | Suma celkom — nižšia sadzba |
+| `C222_SumaSpoluVyssia` | money | Suma celkom — vyššia sadzba |
+| `C240_Mena3M` | varchar | Mena 3. mena |
+| `C241_MnozstvoJednotky3M` | smallint | |
+| `C242_KurzNBS3M` | float | Kurz NBS pre 3. menu |
+| `C257_ZakladDPHZnizeny2` | money | Základ DPH — znížená 2 |
+| `C258_SumaDPHZnizena2` | money | Suma DPH — znížená 2 |
+| `C259_SumaSpoluZnizena2` | money | Suma celkom — znížená 2 |
+| `C261_ZakladDPHZnizeny3` | money | Základ DPH — znížená 3 |
+| `C262_SumaDPHZnizena3` | money | Suma DPH — znížená 3 |
+| `C263_SumaSpoluZnizena3` | money | Suma celkom — znížená 3 |
+| `C008_IDEUDPridal` | int | FK → T004_Uzivatelia (kto pridal) |
+| `C011_IDStredisko` | int | Stredisko |
+| `C012_IDZakazka` | int | Zákazka |
+| `C013_IDCinnost` | int | Činnosť |
+| `C014_IDPracovnik` | int | Pracovník |
 
 ### T025_OkruhyUctovnychDokladov — Číselník okruhov
 - `C021_Kod` = kód okruhu

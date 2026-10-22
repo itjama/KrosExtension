@@ -1,4 +1,5 @@
 using KrosExtension.Application.Companies;
+using KrosExtension.Domain.Configuration;
 using KrosExtension.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,22 @@ public sealed class OmegaDashboardReader(ApplicationDbContext dbContext) : IOmeg
     public async Task<IReadOnlyList<OmegaDashboardCompany>> GetCompaniesAsync(
         CancellationToken cancellationToken = default)
     {
+        var trackedKeys = await dbContext.TrackedCompanies
+            .AsNoTracking()
+            .Where(tc => tc.ProductType == ProductType.Omega && tc.IsTracked)
+            .Select(tc => new { tc.DataReadServerId, tc.DatabaseName })
+            .ToListAsync(cancellationToken);
+
+        var trackedSet = trackedKeys
+            .Select(k => (k.DataReadServerId, k.DatabaseName))
+            .ToHashSet();
+
         var snapshots = await dbContext.OmegaCompanyDashboardSnapshots
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
         var latestSnapshots = snapshots
+            .Where(snapshot => trackedSet.Contains((snapshot.DataReadServerId, snapshot.DatabaseName)))
             .GroupBy(snapshot => new
             {
                 snapshot.DataReadServerId,

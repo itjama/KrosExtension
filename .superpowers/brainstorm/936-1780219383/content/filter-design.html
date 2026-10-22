@@ -1,0 +1,130 @@
+<h2>Návrh filtrov — finálny design</h2>
+<p class="subtitle">Tak bude vyzerať filter bar v Omega a Olymp dashboarde. Klikni na kartu ak súhlasíš.</p>
+
+<div class="cards">
+
+  <div class="card" data-choice="omega" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f172a">
+      <div style="color:#94a3b8;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Omega dashboard</div>
+
+      <!-- Filter bar -->
+      <div style="background:#1e293b;border-radius:6px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <div style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:4px;padding:5px 10px;font-size:11px;color:#64748b">🔍 Hľadať firmu...</div>
+          <div style="background:#334155;color:#94a3b8;border-radius:4px;padding:4px 10px;font-size:10px;cursor:pointer">✕ Reset</div>
+          <div style="color:#64748b;font-size:10px;white-space:nowrap">12 / 20</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <span style="font-size:9px;color:#64748b;align-self:center">Flagy:</span>
+          <!-- selected pill -->
+          <span style="background:#7f1d1d;color:#fca5a5;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #dc2626;cursor:pointer">30d backlog ✕</span>
+          <!-- inactive pills -->
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">no posting</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">drop</span>
+          <span style="background:#7c2d12;color:#fdba74;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #ea580c;cursor:pointer">storno ✕</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">stuck</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">broken month</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">neskoré nahodenie</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">pomalé zaúčt.</span>
+        </div>
+      </div>
+
+      <!-- Table snippet -->
+      <div style="background:#1e293b;border-radius:4px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:2fr 60px 60px 60px 80px;gap:4px;padding:6px 10px;background:#334155;font-size:9px;color:#94a3b8;font-weight:600">
+          <div>Firma</div><div>Health</div><div>7d</div><div>30d</div><div>Flagy</div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 60px 60px 60px 80px;gap:4px;padding:6px 10px;font-size:9px;color:#e2e8f0;border-bottom:1px solid #0f172a">
+          <div>ABC s.r.o.<br><span style="color:#64748b">OMEGA_001</span></div>
+          <div><span style="background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 5px">34</span></div>
+          <div>12</div><div>89</div>
+          <div><span style="background:#7f1d1d;color:#fca5a5;border-radius:8px;padding:1px 5px;font-size:8px">30d backlog</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 60px 60px 60px 80px;gap:4px;padding:6px 10px;font-size:9px;color:#e2e8f0">
+          <div>XYZ spol.<br><span style="color:#64748b">OMEGA_002</span></div>
+          <div><span style="background:#7c2d12;color:#fdba74;border-radius:4px;padding:1px 5px">61</span></div>
+          <div>44</div><div>210</div>
+          <div><span style="background:#7c2d12;color:#fdba74;border-radius:8px;padding:1px 5px;font-size:8px">storno</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Omega — 16 flag pills</h3>
+      <p>Len flagy prítomné v aktuálnych dátach sú viditeľné. Aktívne pills sú sfarbené podľa severity (critical = červená, bad = oranžová).</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="olymp" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f172a">
+      <div style="color:#94a3b8;font-size:11px;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Olymp dashboard</div>
+
+      <!-- Filter bar -->
+      <div style="background:#1e293b;border-radius:6px;padding:10px 12px;margin-bottom:8px">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <div style="flex:1;background:#0f172a;border:1px solid #334155;border-radius:4px;padding:5px 10px;font-size:11px;color:#64748b">🔍 Hľadať firmu...</div>
+          <div style="background:#334155;color:#94a3b8;border-radius:4px;padding:4px 10px;font-size:10px;cursor:pointer">✕ Reset</div>
+          <div style="color:#64748b;font-size:10px;white-space:nowrap">8 / 15</div>
+        </div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <span style="font-size:9px;color:#64748b;align-self:center">Flagy:</span>
+          <span style="background:#7f1d1d;color:#fca5a5;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #dc2626;cursor:pointer">mesiac chýba ✕</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">oneskorené mzdy</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">30d neaktivita</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">14d neaktivita</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">chýbajúce obdobia</span>
+          <span style="background:#1e293b;color:#64748b;border-radius:10px;padding:2px 8px;font-size:9px;border:1px solid #334155;cursor:pointer">nekonzistencia</span>
+        </div>
+      </div>
+
+      <!-- Table snippet -->
+      <div style="background:#1e293b;border-radius:4px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:2fr 60px 80px 70px 80px;gap:4px;padding:6px 10px;background:#334155;font-size:9px;color:#94a3b8;font-weight:600">
+          <div>Firma</div><div>Health</div><div>Posl. aktivita</div><div>Akt. mes.</div><div>Flagy</div>
+        </div>
+        <div style="display:grid;grid-template-columns:2fr 60px 80px 70px 80px;gap:4px;padding:6px 10px;font-size:9px;color:#e2e8f0">
+          <div>Práca s.r.o.<br><span style="color:#64748b">OLYMP_05</span></div>
+          <div><span style="background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 5px">28</span></div>
+          <div>12. 4. 2026</div>
+          <div><span style="background:#7f1d1d;color:#fca5a5;border-radius:4px;padding:1px 5px">✗</span></div>
+          <div><span style="background:#7f1d1d;color:#fca5a5;border-radius:8px;padding:1px 5px;font-size:8px">mesiac chýba</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Olymp — 7 flag pills</h3>
+      <p>Olymp má iné flagy (payroll-špecifické). Rovnaký vizuálny štýl, iné pill-čipy.</p>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:20px">
+  <h3>Technické detaily</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px">
+    <div style="background:#1e293b;border-radius:6px;padding:12px;font-size:11px;color:#94a3b8">
+      <div style="color:#e2e8f0;font-weight:600;margin-bottom:6px">Stav filtrov</div>
+      <div style="font-family:monospace;font-size:10px;color:#7dd3fc">
+        type FilterState = &#123;<br>
+        &nbsp;&nbsp;nameQuery: string;<br>
+        &nbsp;&nbsp;selectedFlags: string[];<br>
+        &#125;
+      </div>
+      <div style="margin-top:8px;color:#64748b;font-size:10px">Ukladá sa do localStorage:<br>
+        <code style="color:#7dd3fc">ledgerpulse.filters.omega</code><br>
+        <code style="color:#7dd3fc">ledgerpulse.filters.olymp</code>
+      </div>
+    </div>
+    <div style="background:#1e293b;border-radius:6px;padding:12px;font-size:11px;color:#94a3b8">
+      <div style="color:#e2e8f0;font-weight:600;margin-bottom:6px">Filter logika</div>
+      <div style="color:#64748b;font-size:10px;line-height:1.6">
+        1. Meno: <span style="color:#86efac">case-insensitive includes</span><br>
+        2. Flagy: <span style="color:#86efac">OR</span> — firma má aspoň 1 vybraný flag<br>
+        3. Kombinácia: <span style="color:#86efac">AND</span> — obe podmienky súčasne<br>
+        4. Žiadny flag vybraný = bez filtra flagov<br>
+        5. Pills: len flagy <span style="color:#86efac">prítomné v dátach</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="margin-top:16px">Klikni na obe karty ak súhlasíš s návrhom, alebo napíš čo zmeniť.</p>

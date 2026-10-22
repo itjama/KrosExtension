@@ -439,7 +439,13 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #94a3b8;
+  margin: 0 0 0.3rem;
+}
+.card-desc {
+  font-size: 0.90rem;
+  color: #64748b;
   margin: 0 0 0.75rem;
+  line-height: 1.4;
 }
 .detail-card.full-width {
   grid-column: 1 / -1;
@@ -468,6 +474,7 @@ th {
 }
 .score-label {
   font-size: 0.82rem;
+  cursor: default;
 }
 .score-bar-track {
   height: 8px;
@@ -609,6 +616,22 @@ th {
   min-width: 5rem;
   text-align: right;
 }
+.late-entry-over30 {
+  font-size: 0.78rem;
+  font-weight: 600;
+  min-width: 7rem;
+  text-align: right;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+.late-entry-over30.bad {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.late-entry-over30.critical {
+  background: var(--crit-bg);
+  color: var(--crit-fg);
+}
 
 /* ---- Monthly heatmap ---- */
 .heatmap {
@@ -656,7 +679,7 @@ th {
   width: 30px;
   height: 30px;
   min-height: 30px;
-  padding: 1px;
+  padding: 12px;
   font-size: 15px;
   font-weight: 700;
   border-color: #94a3b8;
@@ -835,4 +858,85 @@ th {
   background: #fef9c3;
   border-color: #ca8a04;
   color: #854d0e;
+}
+
+/* ---- Clickable warning pill ---- */
+.warning-pill.clickable-pill {
+  cursor: pointer;
+  text-decoration: underline dotted;
+}
+.warning-pill.clickable-pill:hover {
+  filter: brightness(0.92);
+}
+
+/* ---- Orphan payments modal ---- */
+.orphan-modal {
+  background: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  max-width: 900px;
+  width: calc(100% - 2rem);
+}
+.orphan-modal-body {
+  color: #374151;
+  font-size: 0.85rem;
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+}
+.orphan-notice {
+  background: #fef9c3;
+  border: 1px solid #ca8a04;
+  border-radius: 6px;
+  color: #854d0e;
+  font-size: 0.82rem;
+  margin: 0 0 0.8rem;
+  padding: 0.5rem 0.8rem;
+}
+.orphan-scroll {
+  overflow-x: auto;
+}
+.orphan-table {
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  min-width: 700px;
+  width: 100%;
+}
+.orphan-table th {
+  background: #f1f5f9;
+  border-bottom: 2px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+.orphan-table td {
+  border-bottom: 1px solid #f1f5f9;
+  color: #1f2937;
+  padding: 5px 10px;
+  vertical-align: top;
+}
+.orphan-table tr:last-child td {
+  border-bottom: none;
+}
+.orphan-id-cell {
+  color: #ef4444;
+  font-weight: 600;
+}
+.orphan-amount-cell {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.orphan-note-cell {
+  color: #64748b;
+  font-size: 0.78rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

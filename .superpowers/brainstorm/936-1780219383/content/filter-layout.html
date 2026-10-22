@@ -1,0 +1,86 @@
+<h2>Kde a ako zobraziť filtre?</h2>
+<p class="subtitle">Vyber layout filter baru pre Omega / Olymp dashboard</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Vždy viditeľný inline bar</h3>
+      <p>Filter bar je stále zobrazený priamo nad tabuľkou — žiadne klikanie navyše.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Omega dashboard</div>
+        <div class="mockup-body" style="padding:12px;font-size:12px">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+            <input class="mock-input" placeholder="🔍 Hľadať firmu..." style="width:200px;font-size:11px">
+            <select class="mock-input" style="font-size:11px;padding:4px 8px">
+              <option>Všetky flagy</option>
+              <option>OLD_UNPOSTED_30D</option>
+              <option>ZERO_POSTING</option>
+              <option>ACTIVITY_DROP</option>
+            </select>
+            <button class="mock-button" style="font-size:11px;padding:4px 10px;background:#e5e7eb;color:#374151">✕ Reset</button>
+            <span style="color:#6b7280;font-size:11px;margin-left:auto">12 z 20 firiem</span>
+          </div>
+          <div style="background:#f3f4f6;border-radius:4px;padding:8px;font-size:11px;color:#6b7280">
+            [tabuľka firiem...]
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Rozbaľovací panel „Filtre ▾"</h3>
+      <p>Filtre sú skryté za tlačidlom — dashboard vyzerá čistejšie, filtre sú na klik.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Omega dashboard</div>
+        <div class="mockup-body" style="padding:12px;font-size:12px">
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+            <button class="mock-button" style="font-size:11px;padding:4px 12px">▾ Filtre</button>
+            <span style="color:#6b7280;font-size:11px">— filtre sú skryté</span>
+          </div>
+          <div style="background:#f3f4f6;border-radius:4px;padding:8px;font-size:11px;color:#6b7280">
+            [tabuľka firiem...]
+          </div>
+          <div style="margin-top:8px;color:#9ca3af;font-size:11px;font-style:italic">↑ Po kliknutí sa rozbalí filter panel s textovým poľom + výberom flagov</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Search bar + aktívne flagy ako pills</h3>
+      <p>Textové hľadanie je vždy viditeľné. Flagy sa vyberajú cez klikateľné pill-čipy pod ním — ľahko sa zapínajú/vypínajú.</p>
+      <div class="mockup" style="margin-top:12px">
+        <div class="mockup-header">Omega dashboard</div>
+        <div class="mockup-body" style="padding:12px;font-size:12px">
+          <div style="margin-bottom:6px">
+            <input class="mock-input" placeholder="🔍 Hľadať firmu..." style="width:100%;font-size:11px;box-sizing:border-box">
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+            <span style="font-size:10px;color:#6b7280">Flagy:</span>
+            <span style="background:#fee2e2;color:#dc2626;border-radius:12px;padding:2px 8px;font-size:10px;cursor:pointer;border:1px solid #fca5a5">30d backlog ✕</span>
+            <span style="background:#f3f4f6;color:#374151;border-radius:12px;padding:2px 8px;font-size:10px;cursor:pointer;border:1px solid #d1d5db">no posting</span>
+            <span style="background:#f3f4f6;color:#374151;border-radius:12px;padding:2px 8px;font-size:10px;cursor:pointer;border:1px solid #d1d5db">drop</span>
+            <span style="background:#f3f4f6;color:#374151;border-radius:12px;padding:2px 8px;font-size:10px;cursor:pointer;border:1px solid #d1d5db">storno</span>
+            <span style="font-size:10px;color:#9ca3af">+ ďalšie...</span>
+            <button class="mock-button" style="font-size:10px;padding:2px 8px;background:#e5e7eb;color:#374151;margin-left:auto">✕ Reset</button>
+          </div>
+          <div style="background:#f3f4f6;border-radius:4px;padding:8px;font-size:11px;color:#6b7280">
+            [tabuľka firiem...]
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="section" style="margin-top:16px">
+  <p class="subtitle" style="font-size:12px">Poznámka: Všetky varianty budú ukladať stav do <strong>localStorage</strong> (Omega a Olymp oddelene) — pretrvá medzi reloadmi, ale nie je to cookie.</p>
+</div>

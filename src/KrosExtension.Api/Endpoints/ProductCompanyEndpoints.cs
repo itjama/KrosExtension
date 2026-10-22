@@ -87,6 +87,18 @@ public static class ProductCompanyEndpoints
 
                 return detail is null ? Results.NotFound() : Results.Ok(detail);
             }).WithName("GetOmegaCompanyDetail");
+
+            productGroup.MapGet("/dashboard/companies/{dataReadServerId:guid}/{databaseName}/orphan-payments", async (
+                Guid dataReadServerId,
+                string databaseName,
+                IOmegaOrphanPaymentsReader orphanReader,
+                CancellationToken cancellationToken) =>
+            {
+                var result = await orphanReader.GetOrphanPaymentsAsync(
+                    dataReadServerId, databaseName, cancellationToken);
+
+                return result is null ? Results.NotFound() : Results.Ok(result);
+            }).WithName("GetOmegaOrphanPayments");
         }
 
         var group = endpoints

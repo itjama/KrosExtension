@@ -483,13 +483,13 @@ internal static class OmegaDashboardSnapshotCalculator
                     e.C023_CisloInterneKodOkruh AS DocumentCode,
                     DATEDIFF(day,
                         TRY_CONVERT(date, CONCAT(e.C116_RokZaevidovania, '-', e.C115_MesZaevidovania, '-', e.C114_DenZaevidovania)),
-                        TRY_CONVERT(date, CONCAT(e.C119_RokPoslednejOpravy, '-', e.C118_MesPoslednejOpravy, '-', e.C117_DenPoslednejOpravy))
+                        TRY_CONVERT(date, CONCAT(e.C122_RokUzavierkyHLK, '-', e.C121_MesUzavierkyHLK, '-', e.C120_DenUzavierkyHLK))
                     ) AS PostingLagDays
                 FROM dbo.T040_EUD AS e
                 WHERE ISNULL(e.C001_Vymazany, 0) = 0
                   AND e.C023_CisloInterneKodOkruh IN ('DF', 'OF', 'PD', 'BV')
                   AND NULLIF(LTRIM(RTRIM(e.C027_KodZauctoval)), '') IS NOT NULL
-                  AND TRY_CONVERT(date, CONCAT(e.C119_RokPoslednejOpravy, '-', e.C118_MesPoslednejOpravy, '-', e.C117_DenPoslednejOpravy))
+                  AND TRY_CONVERT(date, CONCAT(e.C122_RokUzavierkyHLK, '-', e.C121_MesUzavierkyHLK, '-', e.C120_DenUzavierkyHLK))
                       BETWEEN @From90 AND @Today
             ) AS src
         ),

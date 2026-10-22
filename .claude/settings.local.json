@@ -10,7 +10,30 @@
       "PowerShell(Get-Process *)",
       "Bash(dotnet test *)",
       "Bash(dotnet ef *)",
-      "Bash(dotnet tool *)"
+      "Bash(dotnet tool *)",
+      "Bash(New-Item -ItemType Directory -Force \"e:\\\\Projects\\\\Kros extension\\\\docs\\\\superpowers\\\\plans\")",
+      "Bash(Out-Null)",
+      "Bash(sqlcmd *)",
+      "Bash(Test-Path *)",
+      "Bash(where chromium-cli *)",
+      "Bash(where playwright *)",
+      "Bash(npx playwright *)",
+      "Bash(dotnet run *)",
+      "Bash(Start-Sleep -Seconds 5)",
+      "Bash(curl -s http://localhost:5184/health)",
+      "Bash(curl *)",
+      "Bash(node -e ' *)",
+      "Bash(npm install *)",
+      "Bash(NODE_PATH='C:\\\\Users\\\\TUF\\\\AppData\\\\Roaming\\\\npm\\\\node_modules' node -e ' *)",
+      "Bash(del *)",
+      "Bash(npx tsc *)",
+      "Bash(sqllocaldb info *)",
+      "Bash(Select-String *)",
+      "PowerShell(sqlcmd *)",
+      "Bash(npm uninstall *)",
+      "Bash(bash *)",
+      "Bash(git *)",
+      "Bash(node_modules/.bin/tsc --noEmit)"
     ]
   }
 }

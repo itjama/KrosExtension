@@ -1,4 +1,5 @@
 using KrosExtension.Application.Companies;
+using KrosExtension.Domain.Configuration;
 using KrosExtension.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,11 +10,22 @@ public sealed class OlympDashboardReader(ApplicationDbContext dbContext) : IOlym
     public async Task<IReadOnlyList<OlympDashboardCompany>> GetCompaniesAsync(
         CancellationToken cancellationToken = default)
     {
+        var trackedKeys = await dbContext.TrackedCompanies
+            .AsNoTracking()
+            .Where(tc => tc.ProductType == ProductType.Olymp && tc.IsTracked)
+            .Select(tc => new { tc.DataReadServerId, tc.DatabaseName })
+            .ToListAsync(cancellationToken);
+
+        var trackedSet = trackedKeys
+            .Select(k => (k.DataReadServerId, k.DatabaseName))
+            .ToHashSet();
+
         var snapshots = await dbContext.OlympCompanyDashboardSnapshots
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
         var latest = snapshots
+            .Where(s => trackedSet.Contains((s.DataReadServerId, s.DatabaseName)))
             .GroupBy(s => new { s.DataReadServerId, s.DatabaseName })
             .Select(g => g.OrderByDescending(s => s.SnapshotAt).First())
             .OrderBy(s => s.HealthScore)

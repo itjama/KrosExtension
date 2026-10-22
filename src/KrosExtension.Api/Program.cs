@@ -6,6 +6,8 @@ using KrosExtension.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 
+
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseWindowsService(options =>

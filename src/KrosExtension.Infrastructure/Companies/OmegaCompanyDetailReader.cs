@@ -48,6 +48,7 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
 
         var funnel = await ReadFunnelAsync(connection, DateTime.Today, cancellationToken);
         var monthly = await ReadMonthlyAsync(connection, DateTime.Today, cancellationToken);
+        var postingLagOver30 = await ReadPostingLagOver30Async(connection, DateTime.Today, cancellationToken);
 
         var warnings = string.IsNullOrWhiteSpace(snapshot.WarningFlags)
             ? (IReadOnlyList<string>)[]
@@ -83,15 +84,19 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
             snapshot.PostingLagDfAvgDays,
             snapshot.PostingLagDfMaxDays,
             snapshot.PostingLagDfCount,
+            postingLagOver30.DfOver30Count,
             snapshot.PostingLagOfAvgDays,
             snapshot.PostingLagOfMaxDays,
             snapshot.PostingLagOfCount,
+            postingLagOver30.OfOver30Count,
             snapshot.PostingLagPdAvgDays,
             snapshot.PostingLagPdMaxDays,
             snapshot.PostingLagPdCount,
+            postingLagOver30.PdOver30Count,
             snapshot.PostingLagBvAvgDays,
             snapshot.PostingLagBvMaxDays,
             snapshot.PostingLagBvCount,
+            postingLagOver30.BvOver30Count,
             snapshot.LateEntryDfAvgDays,
             snapshot.LateEntryDfMaxDays,
             snapshot.LateEntryDfCount,
@@ -157,6 +162,29 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
         return list;
     }
 
+    private static async Task<PostingLagOver30Metrics> ReadPostingLagOver30Async(
+        SqlConnection connection,
+        DateTime today,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.CommandText = PostingLagOver30Sql;
+        command.Parameters.Add(new SqlParameter("@Today", SqlDbType.Date) { Value = today.Date });
+
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            return new PostingLagOver30Metrics(0, 0, 0, 0);
+        }
+
+        return new PostingLagOver30Metrics(
+            GetInt64(reader, "DfOver30Count"),
+            GetInt64(reader, "OfOver30Count"),
+            GetInt64(reader, "PdOver30Count"),
+            GetInt64(reader, "BvOver30Count"));
+    }
+
     private static long GetInt64(SqlDataReader reader, string name)
     {
         var value = reader[name];
@@ -169,6 +197,12 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
         return value is null or DBNull ? null : Convert.ToDecimal(value);
     }
 
+    private sealed record PostingLagOver30Metrics(
+        long DfOver30Count,
+        long OfOver30Count,
+        long PdOver30Count,
+        long BvOver30Count);
+
     private sealed record FunnelMetrics(
         long Registered30d,
         long PreAccounted30d,
@@ -180,6 +214,30 @@ public sealed class OmegaCompanyDetailReader(ApplicationDbContext dbContext) : I
         long Bucket4to7d,
         long Bucket8to30d,
         long Bucket30dPlus);
+
+    private const string PostingLagOver30Sql = """
+        DECLARE @From90 date = DATEADD(day, -89, @Today);
+
+        SELECT
+            COUNT(CASE WHEN DocumentCode = 'DF' AND PostingLagDays > 30 THEN 1 END) AS DfOver30Count,
+            COUNT(CASE WHEN DocumentCode = 'OF' AND PostingLagDays > 30 THEN 1 END) AS OfOver30Count,
+            COUNT(CASE WHEN DocumentCode = 'PD' AND PostingLagDays > 30 THEN 1 END) AS PdOver30Count,
+            COUNT(CASE WHEN DocumentCode = 'BV' AND PostingLagDays > 30 THEN 1 END) AS BvOver30Count
+        FROM (
+            SELECT
+                e.C023_CisloInterneKodOkruh AS DocumentCode,
+                DATEDIFF(day,
+                    TRY_CONVERT(date, CONCAT(e.C116_RokZaevidovania, '-', e.C115_MesZaevidovania, '-', e.C114_DenZaevidovania)),
+                    TRY_CONVERT(date, CONCAT(e.C122_RokUzavierkyHLK, '-', e.C121_MesUzavierkyHLK, '-', e.C120_DenUzavierkyHLK))
+                ) AS PostingLagDays
+            FROM dbo.T040_EUD AS e
+            WHERE ISNULL(e.C001_Vymazany, 0) = 0
+              AND e.C023_CisloInterneKodOkruh IN ('DF', 'OF', 'PD', 'BV')
+              AND NULLIF(LTRIM(RTRIM(e.C027_KodZauctoval)), '') IS NOT NULL
+              AND TRY_CONVERT(date, CONCAT(e.C122_RokUzavierkyHLK, '-', e.C121_MesUzavierkyHLK, '-', e.C120_DenUzavierkyHLK))
+                  BETWEEN @From90 AND @Today
+        ) AS src
+        """;
 
     private const string FunnelSql = """
         DECLARE @From30 date = DATEADD(day, -29, @Today);

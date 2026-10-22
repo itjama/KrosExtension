@@ -13,6 +13,23 @@ type DashboardFilterState = {
   selectedFlags: string[];
 };
 
+type OmegaOrphanPayment = {
+  paymentId: number;
+  orphanedDocumentId: number;
+  documentType: string;
+  internalNumber: string;
+  paymentDate: string | null;
+  amount: number;
+  currency: string;
+  paymentKind: string;
+  note: string | null;
+};
+
+type OmegaOrphanPaymentsResult = {
+  totalCount: number;
+  items: OmegaOrphanPayment[];
+};
+
 type DataReadServer = {
   id: string;
   displayName: string;
@@ -143,15 +160,19 @@ type OmegaCompanyDetail = {
   postingLagDfAvgDays: number | null;
   postingLagDfMaxDays: number | null;
   postingLagDfCount: number;
+  postingLagDfOver30Count: number;
   postingLagOfAvgDays: number | null;
   postingLagOfMaxDays: number | null;
   postingLagOfCount: number;
+  postingLagOfOver30Count: number;
   postingLagPdAvgDays: number | null;
   postingLagPdMaxDays: number | null;
   postingLagPdCount: number;
+  postingLagPdOver30Count: number;
   postingLagBvAvgDays: number | null;
   postingLagBvMaxDays: number | null;
   postingLagBvCount: number;
+  postingLagBvOver30Count: number;
   lateEntryDfAvgDays: number | null;
   lateEntryDfMaxDays: number | null;
   lateEntryDfCount: number;
@@ -792,6 +813,7 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState<DashboardFilterState>(() => readFilters(FILTER_KEY_OMEGA));
+  const [orphanModal, setOrphanModal] = useState<{ dataReadServerId: string; databaseName: string; companyName: string } | null>(null);
 
   useEffect(() => {
     writeFilters(FILTER_KEY_OMEGA, filters);
@@ -1002,17 +1024,43 @@ function OmegaDashboardPage({ onOpenDetail }: { onOpenDetail: (dataReadServerId:
               <td>
                 <div className="warning-list">
                   {company.warningFlags.length === 0 && <span className="warning-pill ok">OK</span>}
-                  {company.warningFlags.map((warning) => (
-                    <Tooltip key={warning} content={warningTooltip(warning)}>
-                      <span className={`warning-pill ${warningSeverity(warning)}`}>{warningLabel(warning)}</span>
-                    </Tooltip>
-                  ))}
+                  {company.warningFlags.map((warning) => {
+                    if (warning === 'ORPHAN_PAYMENTS') {
+                      return (
+                        <button
+                          key={warning}
+                          className={`warning-pill ${warningSeverity(warning)} clickable-pill`}
+                          title={warningTooltip(warning)}
+                          onClick={() => setOrphanModal({
+                            dataReadServerId: company.dataReadServerId,
+                            databaseName: company.databaseName,
+                            companyName: company.companyName,
+                          })}
+                        >
+                          {warningLabel(warning)} ↗
+                        </button>
+                      );
+                    }
+                    return (
+                      <Tooltip key={warning} content={warningTooltip(warning)}>
+                        <span className={`warning-pill ${warningSeverity(warning)}`}>{warningLabel(warning)}</span>
+                      </Tooltip>
+                    );
+                  })}
                 </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
+      {orphanModal && (
+        <OrphanPaymentsModal
+          dataReadServerId={orphanModal.dataReadServerId}
+          databaseName={orphanModal.databaseName}
+          companyName={orphanModal.companyName}
+          onClose={() => setOrphanModal(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1288,14 +1336,6 @@ function OlympCompanyDetailPage({
           )}
         </div>
         <div className="actions">
-          <HelpModal title="Detail firmy — Olymp">
-            <p>Live dáta načítané priamo z Olymp databázy (nie zo snapshotu).</p>
-            <p><strong>Health score</strong> — vážený priemer 4 zložiek: Aktivita 25 %, Aktuálnosť miezd 35 %, Konzistencia 25 %, Pravidelnosť 15 %.</p>
-            <p><strong>Payroll status</strong> — prehľad kľúčových indikátorov mzdového spracovania.</p>
-            <p><strong>Chýbajúce obdobia</strong> — mzdové mesiace, ktoré absentujú v dátach v rámci roka.</p>
-            <p><strong>Nekonzistentné obdobia</strong> — mesiace, kde nie sú prítomné všetky 3 tabuľky (Mzda, Base, Odvod).</p>
-            <p><strong>Heatmap období</strong> — každá bunka = 1 mzdový mesiac. M = pracVycMzda, B = pracVycBase, O = pracVycOdvod. Zelená = kompletné, červená = neúplné, sivá = bez dát.</p>
-          </HelpModal>
           <button onClick={load} disabled={isLoading}>
             <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
           </button>
@@ -1310,6 +1350,7 @@ function OlympCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Health score</h2>
+            <p className="card-desc">Celkové zdravie firmy (0–100) ako vážený priemer 4 zložiek. Snapshot z posledného UpdateData.</p>
             <div className="health-score-hero">
               <span className={`score-pill large ${scoreClass(detail.healthScore)}`}>
                 {detail.healthScore}
@@ -1317,13 +1358,15 @@ function OlympCompanyDetailPage({
             </div>
             <div className="score-breakdown">
               {([
-                { label: 'Aktivita', value: detail.activityScore, weight: '25 %' },
-                { label: 'Aktuálnosť miezd', value: detail.payrollCurrentnessScore, weight: '35 %' },
-                { label: 'Konzistencia', value: detail.payrollConsistencyScore, weight: '25 %' },
-                { label: 'Pravidelnosť', value: detail.periodRegularityScore, weight: '15 %' }
-              ] as const).map(({ label, value, weight }) => (
+                { label: 'Aktivita', value: detail.activityScore, weight: '25 %', desc: 'Počet záznamov v activity logu za 30 dní. Nula alebo výrazný pokles = trest.' },
+                { label: 'Aktuálnosť miezd', value: detail.payrollCurrentnessScore, weight: '35 %', desc: 'Či je aktuálny mesiac spracovaný a mzdy nie sú oneskorené o viac ako mesiac.' },
+                { label: 'Konzistencia', value: detail.payrollConsistencyScore, weight: '25 %', desc: 'Každé mzdové obdobie musí mať záznamy vo všetkých 3 tabuľkách (Mzda, Base, Odvod).' },
+                { label: 'Pravidelnosť', value: detail.periodRegularityScore, weight: '15 %', desc: 'Počet spracovaných mzdových období v roku — chýbajúce alebo preskočené mesiace = trest.' }
+              ] as const).map(({ label, value, weight, desc }) => (
                 <div key={label} className="score-row">
-                  <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
+                  <Tooltip content={desc}>
+                    <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
+                  </Tooltip>
                   <div className="score-bar-track">
                     <div className={`score-bar-fill ${scoreClass(value)}`} style={{ width: `${value}%` }} />
                   </div>
@@ -1335,6 +1378,7 @@ function OlympCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Payroll status</h2>
+            <p className="card-desc">Kľúčové indikátory mzdového spracovania načítané zo živej databázy.</p>
             <div className="type-breakdown">
               {([
                 { label: 'Posledná aktivita', value: formatDate(detail.lastActivityDate) },
@@ -1356,6 +1400,7 @@ function OlympCompanyDetailPage({
           {detail.warningFlags.length > 0 && (
             <section className="detail-card">
               <h2>Varovania</h2>
+              <p className="card-desc">Automaticky detegované anomálie v mzdových dátach. Klikni na každý flag pre popis problému.</p>
               <div className="warning-list large">
                 {detail.warningFlags.map((flag) => (
                   <Tooltip key={flag} content={olympWarningTooltip(flag)}>
@@ -1368,6 +1413,7 @@ function OlympCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Aktivita</h2>
+            <p className="card-desc">Počet záznamov v activity logu Olympu zo živej databázy.</p>
             <div className="type-breakdown">
               {([
                 { label: 'Posledných 7 dní', value: String(detail.activity7Days) },
@@ -1383,8 +1429,9 @@ function OlympCompanyDetailPage({
 
           <section className="detail-card full-width">
             <h2>Mzdové obdobia</h2>
+            <p className="card-desc">Každá bunka = 1 mzdový mesiac. M = Mzda, B = Base, O = Odvod. Zelená = všetky 3 tabuľky prítomné, červená = niektorá chýba, sivá = žiadne dáta.</p>
             <div className="heatmap">
-              {detail.periods.map((p) => {
+              {[...detail.periods].reverse().map((p) => {
                 const allOk = p.hasMzda && p.hasBase && p.hasOdvod;
                 const noneOk = !p.hasMzda && !p.hasBase && !p.hasOdvod;
                 const cls = noneOk ? 'heatmap-empty'
@@ -1470,14 +1517,6 @@ function OmegaCompanyDetailPage({
           )}
         </div>
         <div className="actions">
-          <HelpModal title="Detail firmy — Omega">
-            <p>Live dáta načítané priamo z Omega databázy (nie zo snapshotu).</p>
-            <p><strong>Health score</strong> — vážený priemer 6 zložiek: Aktivita 17 %, Completion 25 %, Backlog aging 23 %, Month closing 15 %, Data quality 5 %, Timeliness 15 %.</p>
-            <p><strong>Workflow funnel</strong> — koľko % dokladov prešlo z evidencie cez predkontáciu až na zaúčtovanie za posledných 30 dní.</p>
-            <p><strong>Typ dokladov</strong> — členenie na manuálne (ručne zadané), importované a platforma/API záznamy za 30 dní.</p>
-            <p><strong>Backlog aging</strong> — nezaúčtované doklady rozdelené podľa veku (čím starší, tým väčší problém).</p>
-            <p><strong>Mesačný heatmap</strong> — posting rate za posledných 12 mesiacov. Zelená ≥ 98 %, žltá 95–97 %, oranžová 90–94 %, červená &lt; 90 %.</p>
-          </HelpModal>
           <button onClick={load} disabled={isLoading}>
             <RefreshCw size={16} /> {isLoading ? 'Načítavam' : 'Obnoviť'}
           </button>
@@ -1492,6 +1531,7 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Health score</h2>
+            <p className="card-desc">Celkové zdravie firmy (0–100) ako vážený priemer 6 zložiek. Snapshot z posledného UpdateData.</p>
             <div className="health-score-hero">
               <span className={`score-pill large ${scoreClass(detail.healthScore)}`}>
                 {detail.healthScore}
@@ -1499,15 +1539,17 @@ function OmegaCompanyDetailPage({
             </div>
             <div className="score-breakdown">
               {([
-                { label: 'Aktivita', value: detail.activityScore, weight: '17 %' },
-                { label: 'Completion', value: detail.completionScore, weight: '25 %' },
-                { label: 'Backlog aging', value: detail.backlogAgingScore, weight: '23 %' },
-                { label: 'Month closing', value: detail.monthClosingScore, weight: '15 %' },
-                { label: 'Data quality', value: detail.dataQualityScore, weight: '5 %' },
-                { label: 'Timeliness', value: detail.timelinessScore, weight: '15 %' }
-              ] as const).map(({ label, value, weight }) => (
+                { label: 'Aktivita', value: detail.activityScore, weight: '17 %', desc: 'Počet dokladov za 30 dní. Nula alebo výrazný pokles oproti predchádzajúcemu týždňu = trest.' },
+                { label: 'Completion', value: detail.completionScore, weight: '25 %', desc: 'Podiel zaúčtovaných z registrovaných dokladov za 30 dní. Cieľ: 100 %.' },
+                { label: 'Backlog aging', value: detail.backlogAgingScore, weight: '23 %', desc: 'Nezaúčtované doklady v systéme — čím staršie, tým väčší trest na skóre.' },
+                { label: 'Month closing', value: detail.monthClosingScore, weight: '15 %', desc: 'Posting rate predošlého mesiaca (< 95 % = problém) a historický priemer (< 98 % = problém).' },
+                { label: 'Data quality', value: detail.dataQualityScore, weight: '5 %', desc: 'Chyby v dátach: doklady s null dátumom, orphan záznamy, neznáme kódy okruhov.' },
+                { label: 'Timeliness', value: detail.timelinessScore, weight: '15 %', desc: 'Oneskorenie nahodenia a zaúčtovania dokladov za posl. 90 dní. Nad 14 dní = trest, nad 60 dní = 0.' }
+              ] as const).map(({ label, value, weight, desc }) => (
                 <div key={label} className="score-row">
-                  <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
+                  <Tooltip content={desc}>
+                    <span className="score-label">{label} <span className="muted-label">{weight}</span></span>
+                  </Tooltip>
                   <div className="score-bar-track">
                     <div className={`score-bar-fill ${scoreClass(value)}`} style={{ width: `${value}%` }} />
                   </div>
@@ -1520,6 +1562,7 @@ function OmegaCompanyDetailPage({
           {detail.warningFlags.length > 0 && (
             <section className="detail-card">
               <h2>Varovania</h2>
+              <p className="card-desc">Automaticky detegované anomálie. Klikni na každý flag pre popis problému.</p>
               <div className="warning-list large">
                 {detail.warningFlags.map((flag) => (
                   <Tooltip key={flag} content={warningTooltip(flag)}>
@@ -1532,6 +1575,7 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Workflow funnel — posledných 30 dní</h2>
+            <p className="card-desc">Koľko dokladov prešlo z evidencie cez predkontáciu až na zaúčtovanie. Ideál: všetky zaevidované sú aj zaúčtované.</p>
             <div className="funnel">
               {([
                 { label: 'Zaevidované', value: detail.registered30Days },
@@ -1558,6 +1602,7 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Typ dokladov — posledných 30 dní</h2>
+            <p className="card-desc">Členenie podľa spôsobu vzniku dokladu: ručne zadané, importované zo súboru alebo cez platformu/API.</p>
             <div className="type-breakdown">
               {([
                 { label: 'Manuálne', value: detail.manual30Days },
@@ -1574,6 +1619,7 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Backlog — nezaúčtované doklady</h2>
+            <p className="card-desc">Všetky doklady v systéme, ktoré ešte neboli zaúčtované, rozdelené podľa veku od zaevidovania. Čím starší doklad, tým väčší problém.</p>
             <div className="aging-grid">
               {([
                 { label: '0–3 dni', value: detail.backlog0to3Days, cls: 'watch' },
@@ -1591,6 +1637,7 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Oneskorenie nahodenia dokladov <span className="muted-label">(posl. 90 dní)</span></h2>
+            <p className="card-desc">Počet dní od dátumu vystavenia dokladu po jeho zadanie do systému. Meria, ako rýchlo sa fyzické doklady dostanú do Omegy.</p>
             <div className="late-entry-grid">
               {([
                 { label: 'DF — Doručené faktúry', avg: detail.lateEntryDfAvgDays, max: detail.lateEntryDfMaxDays, count: detail.lateEntryDfCount },
@@ -1617,14 +1664,16 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card">
             <h2>Oneskorenie zaúčtovania dokladov <span className="muted-label">(posl. 90 dní)</span></h2>
+            <p className="card-desc">Počet dní od zaevidovania po zaúčtovanie do hlavnej knihy (HLK). Zahrnuté sú doklady zaúčtované v posledných 90 dňoch.</p>
             <div className="late-entry-grid">
               {([
-                { label: 'DF — Doručené faktúry', avg: detail.postingLagDfAvgDays, max: detail.postingLagDfMaxDays, count: detail.postingLagDfCount },
-                { label: 'OF — Odoslané faktúry', avg: detail.postingLagOfAvgDays, max: detail.postingLagOfMaxDays, count: detail.postingLagOfCount },
-                { label: 'PD — Pokladňa',         avg: detail.postingLagPdAvgDays, max: detail.postingLagPdMaxDays, count: detail.postingLagPdCount },
-                { label: 'BV — Bankový výpis',    avg: detail.postingLagBvAvgDays, max: detail.postingLagBvMaxDays, count: detail.postingLagBvCount }
-              ]).map(({ label, avg, max, count }) => {
+                { label: 'DF — Doručené faktúry', avg: detail.postingLagDfAvgDays, max: detail.postingLagDfMaxDays, count: detail.postingLagDfCount, over30: detail.postingLagDfOver30Count },
+                { label: 'OF — Odoslané faktúry', avg: detail.postingLagOfAvgDays, max: detail.postingLagOfMaxDays, count: detail.postingLagOfCount, over30: detail.postingLagOfOver30Count },
+                { label: 'PD — Pokladňa',         avg: detail.postingLagPdAvgDays, max: detail.postingLagPdMaxDays, count: detail.postingLagPdCount, over30: detail.postingLagPdOver30Count },
+                { label: 'BV — Bankový výpis',    avg: detail.postingLagBvAvgDays, max: detail.postingLagBvMaxDays, count: detail.postingLagBvCount, over30: detail.postingLagBvOver30Count }
+              ]).map(({ label, avg, max, count, over30 }) => {
                 const cls = avg === null ? 'ok' : avg > 30 ? 'critical' : avg > 14 ? 'bad' : 'ok';
+                const over30Pct = count > 0 ? Math.round(over30 * 100 / count) : 0;
                 return (
                   <div key={label} className={`late-entry-row ${cls}`}>
                     <span className="late-entry-label">{label}</span>
@@ -1634,6 +1683,11 @@ function OmegaCompanyDetailPage({
                           <span className="late-entry-avg">{avg ?? 0} dní <span className="muted-label">avg</span></span>
                           <span className="late-entry-max muted-label">max {max ?? 0} dní</span>
                           <span className="late-entry-count muted-label">{count} dokladov</span>
+                          {over30 > 0 && (
+                            <span className={`late-entry-over30 ${over30Pct >= 50 ? 'critical' : 'bad'}`}>
+                              {over30}× nad 30 dní ({over30Pct} %)
+                            </span>
+                          )}
                         </>
                     }
                   </div>
@@ -1644,6 +1698,7 @@ function OmegaCompanyDetailPage({
 
           <section className="detail-card full-width">
             <h2>Mesačné zaúčtovanie — {detail.accountingYear ?? 'posledných 12 mes.'}</h2>
+            <p className="card-desc">Posting rate (% zaúčtovaných z registrovaných dokladov) za každý mesiac. Chýbajúci mesiac s dokladmi je označený ako problém.</p>
             <div className="heatmap">
               {(() => {
                 const now = new Date();
@@ -1871,6 +1926,99 @@ function formatSnapshotAge(isoDate: string | null) {
 function formatPeriodId(periodId: string | null) {
   if (!periodId || periodId.length !== 6) return periodId ?? '–';
   return `${periodId.slice(0, 4)}/${periodId.slice(4)}`;
+}
+
+function OrphanPaymentsModal({ dataReadServerId, databaseName, companyName, onClose }: {
+  dataReadServerId: string;
+  databaseName: string;
+  companyName: string;
+  onClose: () => void;
+}) {
+  const [result, setResult] = useState<OmegaOrphanPaymentsResult | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await fetch(
+          `/api/omega/dashboard/companies/${dataReadServerId}/${encodeURIComponent(databaseName)}/orphan-payments`
+        );
+        if (!response.ok) {
+          setError(await response.text());
+          return;
+        }
+        setResult(await response.json() as OmegaOrphanPaymentsResult);
+      } catch {
+        setError('Chyba pri načítaní dát.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  return createPortal(
+    <div className="help-overlay" onClick={onClose}>
+      <div className="orphan-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="help-modal-header">
+          <span>Orphan payments — {companyName}</span>
+          <button className="help-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="orphan-modal-body">
+          {isLoading && <p className="muted-label">Načítavam...</p>}
+          {error && <p className="error-text">{error}</p>}
+          {result && (
+            <>
+              {result.totalCount > 50 && (
+                <p className="orphan-notice">
+                  Zobrazených 50 z {result.totalCount} záznamov — opravte a obnovte dáta.
+                </p>
+              )}
+              {result.totalCount === 0 && (
+                <p className="muted-label">Žiadne orphan payments — problém bol opravený.</p>
+              )}
+              {result.items.length > 0 && (
+                <div className="orphan-scroll">
+                  <table className="orphan-table">
+                    <thead>
+                      <tr>
+                        <th>ID záznamu</th>
+                        <th>ID chýb. dokladu</th>
+                        <th>Typ</th>
+                        <th>Číslo</th>
+                        <th>Dátum</th>
+                        <th>Suma</th>
+                        <th>Mena</th>
+                        <th>Druh</th>
+                        <th>Poznámka</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.items.map((item) => (
+                        <tr key={item.paymentId}>
+                          <td>{item.paymentId}</td>
+                          <td className="orphan-id-cell">{item.orphanedDocumentId}</td>
+                          <td>{item.documentType}</td>
+                          <td>{item.internalNumber}</td>
+                          <td>{item.paymentDate ? formatDate(item.paymentDate) : '–'}</td>
+                          <td className="orphan-amount-cell">{item.amount.toFixed(2)}</td>
+                          <td>{item.currency}</td>
+                          <td>{item.paymentKind}</td>
+                          <td className="orphan-note-cell">{item.note ?? ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 function readFilters(key: string): DashboardFilterState {
