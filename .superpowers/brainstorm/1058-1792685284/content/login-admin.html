@@ -1,0 +1,94 @@
+<style>
+  .lp-shell { display:flex; min-height:340px; border-radius:6px; overflow:hidden; border:1px solid #d0d5dd; font-size:13px; }
+  .lp-side { width:170px; background:#202733; color:#e4e7ec; padding:12px 8px; display:flex; flex-direction:column; gap:4px; }
+  .lp-brand { font-weight:700; color:#fff; padding:4px 8px 12px; }
+  .lp-item { padding:7px 8px; border-radius:5px; }
+  .lp-item.active { background:#344054; color:#fff; }
+  .lp-sub { padding:6px 8px 6px 22px; color:#cbd2dc; }
+  .lp-sub.active { background:#344054; color:#fff; border-radius:5px; }
+  .lp-group { margin-top:10px; padding:4px 8px; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:#98a2b3; }
+  .lp-spacer { flex:1; }
+  .lp-user { border-top:1px solid #344054; padding:8px; font-size:12px; color:#cbd2dc; }
+  .lp-user b { color:#fff; display:block; }
+  .lp-main { flex:1; background:#f6f7f9; color:#101828; padding:14px; }
+  .lp-main h4 { margin:0 0 10px; font-size:15px; }
+  .lp-card { background:#fff; border:1px solid #e4e7ec; border-radius:6px; padding:10px; }
+  .lp-table { width:100%; border-collapse:collapse; font-size:12px; }
+  .lp-table th, .lp-table td { text-align:left; padding:6px; border-bottom:1px solid #eaecf0; }
+  .lp-btn { display:inline-block; padding:4px 9px; border-radius:5px; border:1px solid #d0d5dd; background:#fff; font-size:11px; color:#101828; }
+  .lp-btn.primary { background:#344054; color:#fff; border-color:#344054; }
+  .lp-tag { font-size:10px; padding:1px 6px; border-radius:8px; background:#eef2ff; color:#3730a3; }
+  .lp-tag.warn { background:#fef9c3; color:#854d0e; }
+  .lp-login { flex:1; display:flex; align-items:center; justify-content:center; background:#202733; }
+  .lp-login-box { background:#fff; color:#101828; width:230px; border-radius:8px; padding:18px; display:flex; flex-direction:column; gap:8px; }
+  .lp-login-box input { padding:7px; border:1px solid #d0d5dd; border-radius:5px; font-size:12px; }
+  .lp-muted { color:#667085; font-size:11px; }
+</style>
+
+<h2>Prihlásenie a admin menu</h2>
+<p class="subtitle">Tri obrazovky vedľa seba. Ľavé menu je dnešný tmavý panel, iba upravený.</p>
+
+<div class="section">
+  <h3>1 · Prihlásenie (pre každého)</h3>
+  <div class="lp-shell">
+    <div class="lp-login">
+      <div class="lp-login-box">
+        <b style="font-size:16px">LedgerPulse</b>
+        <input placeholder="Meno">
+        <input placeholder="Heslo" type="password">
+        <span class="lp-btn primary" style="text-align:center;padding:7px">Prihlásiť</span>
+        <span class="lp-muted">Zabudnuté heslo? Kontaktuj admina.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="split">
+  <div>
+    <h3>2 · Bežný používateľ</h3>
+    <div class="lp-shell">
+      <div class="lp-side">
+        <div class="lp-brand">LedgerPulse</div>
+        <div class="lp-item">Olymp</div>
+        <div class="lp-item active">Omega</div>
+        <div class="lp-spacer"></div>
+        <div class="lp-user"><b>jnovak</b>Zmeniť heslo · Odhlásiť</div>
+      </div>
+      <div class="lp-main">
+        <h4>Omega dashboard</h4>
+        <div class="lp-card lp-muted">…dnešný dashboard bez zmeny, vrátane tlačidla na ručné prepočítanie…</div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <h3>3 · Admin</h3>
+    <div class="lp-shell">
+      <div class="lp-side">
+        <div class="lp-brand">LedgerPulse</div>
+        <div class="lp-item">Olymp</div>
+        <div class="lp-item">Omega</div>
+        <div class="lp-group">Admin</div>
+        <div class="lp-sub active">Používatelia</div>
+        <div class="lp-sub">Servery</div>
+        <div class="lp-sub">Olymp firmy</div>
+        <div class="lp-sub">Omega firmy</div>
+        <div class="lp-sub" style="opacity:.45">Účty Olymp/Omega <i>(neskôr)</i></div>
+        <div class="lp-sub" style="opacity:.45">Zálohy <i>(neskôr)</i></div>
+        <div class="lp-spacer"></div>
+        <div class="lp-user"><b>admin</b>Zmeniť heslo · Odhlásiť</div>
+      </div>
+      <div class="lp-main">
+        <h4>Používatelia <span class="lp-btn primary" style="float:right">+ Nový</span></h4>
+        <div class="lp-card">
+          <table class="lp-table">
+            <tr><th>Meno</th><th>Rola</th><th>Stav</th><th></th></tr>
+            <tr><td>admin</td><td><span class="lp-tag">Admin</span></td><td>aktívny</td><td></td></tr>
+            <tr><td>jnovak</td><td>Používateľ</td><td>aktívny</td><td><span class="lp-btn">Reset hesla</span> <span class="lp-btn">Zablokovať</span></td></tr>
+            <tr><td>pkral</td><td>Používateľ</td><td><span class="lp-tag warn">musí zmeniť heslo</span></td><td><span class="lp-btn">Reset hesla</span> <span class="lp-btn">Zablokovať</span></td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

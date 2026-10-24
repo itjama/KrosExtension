@@ -1,0 +1,8 @@
+{
+  "records": 27,
+  "unique_vectors": 15,
+  "full_encoding_match": 27,
+  "checksum_valid": 27,
+  "changed_checksums_rejected": 27,
+  "format_and_encoding_checks": "passed"
+}
